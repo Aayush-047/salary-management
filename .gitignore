@@ -1,0 +1,22 @@
+# Local-only files
+*.pdf
+CLAUDE.local.md
+
+# Dependencies & build output
+node_modules/
+dist/
+build/
+.next/
+coverage/
+
+# Local databases
+*.db
+*.db-journal
+*.sqlite
+
+# Environment & OS
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
