@@ -4,6 +4,7 @@ Salary management web app for an HR Manager: ~10,000 employees across multiple
 countries. Built step by step in pair-programming style with AI.
 
 ## Rules
+
 - Read CLAUDE.local.md if present (private, local-only context).
 - Work in small agreed steps. No code until the step is agreed. Offer options (a/b/c)
   for decisions and let the user choose.
@@ -15,6 +16,7 @@ countries. Built step by step in pair-programming style with AI.
 - Tests: fast, deterministic (no wall-clock, no unseeded randomness), focused on core logic.
 
 ## Decisions so far (full scope: docs/REQUIREMENTS.md)
+
 - Compensation: base salary + target annual bonus = total cash, in local currency.
   No equity, benefits or actual payouts.
 - History: each pay change is a new compensation entry; mistakes are fixed by editing

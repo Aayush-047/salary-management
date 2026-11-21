@@ -21,32 +21,33 @@ flowchart LR
 - **Repo layout:** a TypeScript monorepo using npm workspaces, with `apps/api`, `apps/web` and `packages/shared`. The shared package holds zod schemas, types and constants (e.g. outlier defaults). API validation and frontend forms both use it, so each rule is written once.
 - **Layers:**
   - **Routes** only parse and validate input.
-  - **Services** hold business rules and wrap each change *and its audit record* in one DB transaction.
+  - **Services** hold business rules and wrap each change _and its audit record_ in one DB transaction.
   - **Repositories** are the only code that touches Prisma or SQL.
   - The **pure core** has no I/O and is unit-tested.
 - **Deployment:** frontend, API and database are deployed separately. Planned: web on Vercel, API on Render, Postgres on Neon (confirmed at the deploy step). The API allows the web origin via CORS, and the web app reads `VITE_API_URL`.
 
 ### Key trade-offs
-| Choice | Over | Why |
-|---|---|---|
-| Separate deploys | One server serving the SPA | Each side deploys and scales independently, and the frontend is served from a CDN. The cost is CORS and two URLs. |
-| Express | Fastify / NestJS | Familiar and minimal. Performance differences don't matter at this scale. |
-| Prisma | Drizzle / raw SQL | Typed client and migrations. Raw SQL (`$queryRaw`) is used where aggregates need it. |
-| PostgreSQL | SQLite | Native `percentile_cont` and window functions keep analytics in the DB. Free hosts have ephemeral disks, which would wipe a SQLite file. |
-| TypeScript | Plain JS | Money arithmetic and shared API shapes benefit from types. Prisma generates them. |
+
+| Choice           | Over                       | Why                                                                                                                                      |
+| ---------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Separate deploys | One server serving the SPA | Each side deploys and scales independently, and the frontend is served from a CDN. The cost is CORS and two URLs.                        |
+| Express          | Fastify / NestJS           | Familiar and minimal. Performance differences don't matter at this scale.                                                                |
+| Prisma           | Drizzle / raw SQL          | Typed client and migrations. Raw SQL (`$queryRaw`) is used where aggregates need it.                                                     |
+| PostgreSQL       | SQLite                     | Native `percentile_cont` and window functions keep analytics in the DB. Free hosts have ephemeral disks, which would wipe a SQLite file. |
+| TypeScript       | Plain JS                   | Money arithmetic and shared API shapes benefit from types. Prisma generates them.                                                        |
 
 ## Data model
 
-| Table | Key fields |
-|---|---|
-| `Employee` | id, employeeCode (unique, e.g. `E00042`), firstName, lastName, email (unique), countryCode → `Country`, departmentId → `Department`, jobTitleId → `JobTitle`, level (1–6), hireDate, status (`ACTIVE`/`TERMINATED`), terminationDate, **currentBaseSalary, currentTargetBonus, currentCurrency** |
-| `CompensationEntry` | id, employeeId, effectiveDate, baseSalary, targetBonus, currency, reason (`HIRE`/`PROMOTION`/`MERIT`/`MARKET_ADJUSTMENT`/`OTHER`), note |
-| `Department` | id, name (unique) |
-| `JobTitle` | id, name (unique) |
-| `Country` | code, name, currency |
-| `FxRate` | currency, rateToUsd, asOfDate |
-| `AuditLog` | id, actorId → `User`, employeeId, entityType, entityId, action (`CREATE`/`UPDATE`/`TERMINATE`), changes (JSON `[{field, from, to}]`), reason, createdAt |
-| `User` | id, name. Seeded with one "HR Manager" |
+| Table               | Key fields                                                                                                                                                                                                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Employee`          | id, employeeCode (unique, e.g. `E00042`), firstName, lastName, email (unique), countryCode → `Country`, departmentId → `Department`, jobTitleId → `JobTitle`, level (1–6), hireDate, status (`ACTIVE`/`TERMINATED`), terminationDate, **currentBaseSalary, currentTargetBonus, currentCurrency** |
+| `CompensationEntry` | id, employeeId, effectiveDate, baseSalary, targetBonus, currency, reason (`HIRE`/`PROMOTION`/`MERIT`/`MARKET_ADJUSTMENT`/`OTHER`), note                                                                                                                                                          |
+| `Department`        | id, name (unique)                                                                                                                                                                                                                                                                                |
+| `JobTitle`          | id, name (unique)                                                                                                                                                                                                                                                                                |
+| `Country`           | code, name, currency                                                                                                                                                                                                                                                                             |
+| `FxRate`            | currency, rateToUsd, asOfDate                                                                                                                                                                                                                                                                    |
+| `AuditLog`          | id, actorId → `User`, employeeId, entityType, entityId, action (`CREATE`/`UPDATE`/`TERMINATE`), changes (JSON `[{field, from, to}]`), reason, createdAt                                                                                                                                          |
+| `User`              | id, name. Seeded with one "HR Manager"                                                                                                                                                                                                                                                           |
 
 - **Money:** integers in **whole units of local currency**. Annual salaries don't need cents, JPY has no minor unit, and this avoids floating-point drift and Prisma's `Decimal`.
 - **Current compensation is stored on `Employee`.** It's recalculated from the latest entry (by effective date) in the same transaction as any entry change. Analytics then read one row per employee with no "latest entry" subquery. The cost is duplicated data, guarded by integration tests that check it matches the history.
@@ -56,20 +57,20 @@ flowchart LR
 
 ## API
 
-| Method & path | Purpose |
-|---|---|
-| `GET /employees` | Search, filters (country, dept, title, level, status), sort, pagination |
-| `GET /employees/:id` | Profile + current comp |
-| `POST /employees` · `PATCH /employees/:id` | Create / edit (edit requires a reason) |
-| `POST /employees/:id/terminate` | Soft-terminate |
-| `GET/POST /employees/:id/compensation` | Timeline / add a pay change |
-| `PATCH /compensation/:entryId` | Correct a mistake (reason required) |
-| `GET /audit` · `GET /employees/:id/audit` | Org-wide / per-employee audit |
-| `POST /imports/employees` | CSV upload. `201 {imported}` or `422 {errors: [{row, field, message}]}`, all-or-nothing |
-| `GET /insights/pay-stats` | `groupBy`, `metric=base\|total`, `currency`, filters |
-| `GET /insights/outliers` | `low`, `high`, `minPeers`, `metric`, filters |
-| `GET /insights/recent-changes` | Raises within `from`–`to` |
-| `GET /meta` | Countries, departments, titles, levels, FX rates + as-of date, outlier defaults |
+| Method & path                              | Purpose                                                                                 |
+| ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `GET /employees`                           | Search, filters (country, dept, title, level, status), sort, pagination                 |
+| `GET /employees/:id`                       | Profile + current comp                                                                  |
+| `POST /employees` · `PATCH /employees/:id` | Create / edit (edit requires a reason)                                                  |
+| `POST /employees/:id/terminate`            | Soft-terminate                                                                          |
+| `GET/POST /employees/:id/compensation`     | Timeline / add a pay change                                                             |
+| `PATCH /compensation/:entryId`             | Correct a mistake (reason required)                                                     |
+| `GET /audit` · `GET /employees/:id/audit`  | Org-wide / per-employee audit                                                           |
+| `POST /imports/employees`                  | CSV upload. `201 {imported}` or `422 {errors: [{row, field, message}]}`, all-or-nothing |
+| `GET /insights/pay-stats`                  | `groupBy`, `metric=base\|total`, `currency`, filters                                    |
+| `GET /insights/outliers`                   | `low`, `high`, `minPeers`, `metric`, filters                                            |
+| `GET /insights/recent-changes`             | Raises within `from`–`to`                                                               |
+| `GET /meta`                                | Countries, departments, titles, levels, FX rates + as-of date, outlier defaults         |
 
 Errors use one JSON shape: `{error: {code, message, details?}}`.
 
@@ -88,13 +89,13 @@ Errors use one JSON shape: `{error: {code, message, details?}}`.
 
 React + Vite + Mantine, with TanStack Query for server state and React Router.
 
-| Page | Contents |
-|---|---|
-| **Employees** | Server-paginated table with search and filters |
-| **Employee detail** | Profile, pay timeline, audit history, edit / terminate |
-| **Insights** | Pay explorer, outliers (with band controls), recent changes |
-| **Import** | CSV upload with a row-level error table |
-| **Audit log** | Org-wide audit |
+| Page                | Contents                                                    |
+| ------------------- | ----------------------------------------------------------- |
+| **Employees**       | Server-paginated table with search and filters              |
+| **Employee detail** | Profile, pay timeline, audit history, edit / terminate      |
+| **Insights**        | Pay explorer, outliers (with band controls), recent changes |
+| **Import**          | CSV upload with a row-level error table                     |
+| **Audit log**       | Org-wide audit                                              |
 
 A global **display-currency selector** in the header (state in the URL) controls conversion. Converted figures show "≈" and the FX as-of date.
 
