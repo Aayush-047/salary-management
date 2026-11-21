@@ -30,3 +30,20 @@ written.
 | Peer group | Title + level + country | Accepted |
 | Leavers | Soft-terminate | Accepted |
 | Seed countries | ~7 | Accepted |
+
+## 2. Design
+
+Prompt (summarised): I asked the AI to propose the stack and architecture as options
+with trade-offs, then reviewed the full DESIGN.md draft in chat before it was written.
+
+| Decision | AI suggested | Outcome |
+|---|---|---|
+| Backend framework | Fastify | **Overridden:** Express (familiar, minimal) |
+| Deployment shape | One server serving API + built SPA | **Overridden:** separate deploys for web, API and DB. The AI noted the CORS / two-URL cost. |
+| Data access | Drizzle ORM | **Overridden:** Prisma |
+| Language | TypeScript | I first said "all in JS". The AI pushed back (money arithmetic, shared API types, Prisma-generated types). **Accepted TypeScript.** |
+| Where analytics run | SQLite, with median/outliers in pure TS | **Challenged by me:** I didn't want stats computed in app code. The AI agreed this scales better in the DB, pointed out SQLite lacks percentiles and free hosts have ephemeral disks, and proposed Postgres. **Accepted Postgres.** Trade-off: analytics tests need a DB, so they're integration tests. |
+| Component library | Mantine | Accepted (I left it to the AI) |
+| Current comp storage | Stored on Employee, synced in-transaction | Accepted |
+| Departments / titles | Reference tables | Accepted |
+| Outlier rule | Peer compa-ratio, fixed band 0.80–1.20, min group 5 | I asked for an explanation with an example first. **Extended:** HR can adjust the band in the UI, with these as defaults. |

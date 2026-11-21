@@ -31,5 +31,14 @@ countries. Built step by step in pair-programming style with AI.
 - Data entry: forms + CSV import (validate everything; all-or-nothing).
 - Leavers: soft status (terminated + end date), excluded from analytics by default.
 - Seed: deterministic, 10,000 employees, ~7 countries.
-- Stack: TBD in DESIGN.md (preference: Node/TypeScript, SQLite, React/Next.js +
-  component library).
+- Stack (details: docs/DESIGN.md): TypeScript monorepo (npm workspaces: apps/api,
+  apps/web, packages/shared). API: Express + Prisma + PostgreSQL. Web: React + Vite +
+  Mantine + TanStack Query. Web, API and DB deployed separately.
+- Analytics run in Postgres (percentile_cont, window functions); pure TS only for
+  small rules (FX conversion, compa-ratio classification, CSV row validation).
+- Current comp is stored on Employee, kept in sync with the latest entry in the
+  same transaction.
+- Departments and job titles are reference tables, not free text.
+- Money: integers in whole units of local currency.
+- Outliers: peer compa-ratio = pay ÷ peer median; defaults 0.80–1.20, min group 5,
+  adjustable by HR in the UI.

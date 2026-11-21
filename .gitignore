@@ -1,6 +1,7 @@
 # Local-only files
 *.pdf
 CLAUDE.local.md
+.claude/settings.local.json
 
 # Dependencies & build output
 node_modules/
