@@ -18,7 +18,9 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "db:up": "docker compose up -d",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "db:migrate": "npm run db:deploy -w @salary/api",
+    "db:seed": "npm run db:seed -w @salary/api"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

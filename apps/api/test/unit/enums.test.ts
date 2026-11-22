@@ -10,7 +10,7 @@ import {
   AuditEntity,
   CompensationReason,
   EmployeeStatus,
-} from "../src/generated/prisma/enums.js";
+} from "../../src/generated/prisma/enums.js";
 
 // The web app cannot import Prisma, so the shared package repeats these lists.
 // This test fails if the two ever drift apart.

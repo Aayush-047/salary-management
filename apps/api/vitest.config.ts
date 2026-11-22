@@ -7,4 +7,22 @@ const conditions = ["source", "module", "node", "development|production"];
 export default defineConfig({
   resolve: { conditions },
   ssr: { resolve: { conditions } },
+  test: {
+    projects: [
+      {
+        extends: true,
+        test: { name: "unit", include: ["test/unit/**/*.test.ts"] },
+      },
+      {
+        extends: true,
+        test: {
+          name: "integration",
+          include: ["test/integration/**/*.test.ts"],
+          globalSetup: ["test/integration/global-setup.ts"],
+          // Files share one database, so run them one at a time.
+          fileParallelism: false,
+        },
+      },
+    ],
+  },
 });
