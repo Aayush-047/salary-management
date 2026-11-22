@@ -48,3 +48,5 @@ countries. Built step by step in pair-programming style with AI.
   (needed before deploy).
 - Browser checks / e2e: Playwright, added with the first real UI page.
 - Dependencies resolve to recent majors; verify library APIs in node_modules before use.
+- Run local tools with `npx --no-install` (or npm scripts), never bare `npx`: if a tool is
+  missing, bare npx silently downloads whatever version the registry has.

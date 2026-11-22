@@ -117,3 +117,9 @@ A global **display-currency selector** in the header (state in the URL) controls
 - Aggregation happens in Postgres. Current comp is stored on `Employee`, so stats never scan history.
 - The seed inserts in batches (`createMany`).
 - Target: list and insight endpoints under 300 ms server-side on 10k employees. To be measured and recorded here once built.
+
+## Known issues
+
+| Issue                                                                                                                                                                                                                          | Risk                                                                                                                   | Plan                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm audit`: high-severity ReDoS in `effect` ≤ 3.22.0 ([GHSA-7589-6fvf-x4pw](https://github.com/advisories/GHSA-7589-6fvf-x4pw)), pulled in by the Prisma CLI (`prisma` → `@prisma/config` → `effect@3.20.0`, pinned exactly). | Negligible. Dev-time CLI only: it parses our own config file, never user input, and is not part of the runtime client. | Remove when Prisma updates its pin. `npm audit fix --force` would downgrade Prisma to v6, and an npm `overrides` entry did not apply cleanly against the pin (see AI_USAGE.md). |

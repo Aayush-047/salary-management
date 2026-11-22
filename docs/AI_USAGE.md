@@ -73,3 +73,31 @@ Where AI verification caught problems:
   TypeScript 6, Mantine 9, React Router 8, Vite 8). It checked their exports and config
   names in node_modules before writing code, rather than trusting memory.
 - The AI couldn't see the browser and said so. I confirmed the UI rendered.
+
+## 4. Data model (in progress)
+
+Decisions: job titles belong to departments (employee stores only the title); illustrative
+FX rates; shared package consumed as TS source in dev/tests and compiled output in
+production; hand-written CHECK constraints for rules Prisma's schema can't express.
+
+Caught by verification before commit:
+
+- `prisma.config.ts` used `env("DATABASE_URL")`, which made `npm install` fail on any
+  machine without a .env (CI, deploy builds). Tested without a URL, then made it optional.
+
+### Incident: fixing a dependency advisory
+
+`npm audit` flagged a high-severity ReDoS in `effect`, pulled in by the Prisma CLI. I chose
+to try an npm `overrides` entry. It went wrong in three steps:
+
+1. npm accepted the override but kept the locked version.
+2. The AI removed the lockfile entry to force re-resolution. npm then didn't install the
+   package at all, Prisma's postinstall crashed, and `npm audit` reported "0
+   vulnerabilities" only because the package was missing.
+3. With the local CLI gone, bare `npx prisma` silently downloaded a Prisma 8 pre-release
+   from the registry (read-only commands only; no damage).
+
+The AI stopped, reported the failure, restored the lockfile from git, and reinstalled with
+`npm ci`. All checks passed against the last commit. I then chose to document the advisory
+instead (negligible risk, dev-only). Lessons recorded as project rules: run tools with
+`npx --no-install`, and treat a "clean" result that follows a failed step as unverified.
