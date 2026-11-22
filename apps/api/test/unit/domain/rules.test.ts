@@ -23,7 +23,7 @@ function outcome(rule: () => void): string {
 }
 
 describe("checkPayEntryDate", () => {
-  const employment = { hireDate: "2022-03-01", terminationDate: null, today: TODAY };
+  const employment = { hireDate: "2022-03-01", terminationDate: null, latestAllowedDate: TODAY };
 
   it.each([
     { effectiveDate: "2022-03-01", expected: "ok" },
@@ -85,7 +85,7 @@ describe("checkPromotion", () => {
 });
 
 describe("checkTerminationDate", () => {
-  const base = { latestEntryDate: "2025-04-01", today: TODAY };
+  const base = { latestEntryDate: "2025-04-01", latestAllowedDate: TODAY };
 
   it.each([
     { terminationDate: "2025-04-01", expected: "ok" },
@@ -98,7 +98,7 @@ describe("checkTerminationDate", () => {
 });
 
 describe("checkHireDateChange", () => {
-  const base = { firstChangeDate: "2023-04-01", terminationDate: null, today: TODAY };
+  const base = { firstChangeDate: "2023-04-01", terminationDate: null, latestAllowedDate: TODAY };
 
   it.each([
     { newHireDate: "2022-01-10", expected: "ok" },

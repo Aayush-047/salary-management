@@ -76,6 +76,24 @@ afterAll(async () => {
 });
 
 describe("POST /employees", () => {
+  it("names the hire date in its own words when it is in the future", async () => {
+    const res = await request(app)
+      .post("/employees")
+      .send({ ...NEW_EMPLOYEE, hireDate: "2026-11-03" });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.message).toBe("Hire date 2026-11-03 is in the future");
+  });
+
+  it("accepts a hire date that is already today east of UTC", async () => {
+    // The test clock is 2026-11-01 12:00 UTC: it is already the 2nd in UTC+14.
+    const res = await request(app)
+      .post("/employees")
+      .send({ ...NEW_EMPLOYEE, hireDate: "2026-11-02" });
+
+    expect(res.status).toBe(201);
+  });
+
   it("creates the employee, the HIRE pay entry and a CREATE audit entry", async () => {
     const res = await request(app).post("/employees").send(NEW_EMPLOYEE);
 
@@ -123,7 +141,7 @@ describe("POST /employees", () => {
     },
     {
       name: "a future hire date",
-      change: { hireDate: "2026-11-02" },
+      change: { hireDate: "2026-11-03" },
       status: 422,
       code: "FUTURE_DATE",
     },
@@ -245,7 +263,7 @@ describe("POST /employees/:code/terminate", () => {
 
   it.each([
     { name: "before the latest pay change", date: "2024-03-31", code: "BEFORE_LATEST_PAY_CHANGE" },
-    { name: "in the future", date: "2026-11-02", code: "FUTURE_DATE" },
+    { name: "in the future", date: "2026-11-03", code: "FUTURE_DATE" },
   ])("rejects a termination date $name", async ({ date, code }) => {
     const res = await request(app)
       .post("/employees/E00005/terminate")

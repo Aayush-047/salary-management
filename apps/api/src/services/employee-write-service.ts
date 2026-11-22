@@ -6,7 +6,7 @@ import type {
 } from "@salary/shared";
 import type { PrismaClient } from "../db/client.js";
 import { diffFields } from "../domain/audit-diff.js";
-import { fromIsoDate, todayIso, toIsoDate, type Clock } from "../domain/clock.js";
+import { fromIsoDate, latestAllowedDate, toIsoDate, type Clock } from "../domain/clock.js";
 import { conflict, invalid } from "../domain/errors.js";
 import { checkHireDateChange, checkPayEntryDate, checkTerminationDate } from "../domain/rules.js";
 import { getCurrentUser, recordAudit, type Db } from "./audit.js";
@@ -70,7 +70,8 @@ export async function createEmployee(
     effectiveDate: input.hireDate,
     hireDate: input.hireDate,
     terminationDate: null,
-    today: todayIso(clock),
+    latestAllowedDate: latestAllowedDate(clock),
+    label: "Hire date",
   });
 
   const code = await prisma.$transaction(async (tx) => {
@@ -181,7 +182,7 @@ export async function updateEmployee(
         newHireDate: input.hireDate!,
         firstChangeDate: firstChange ? toIsoDate(firstChange.effectiveDate) : null,
         terminationDate: null,
-        today: todayIso(clock),
+        latestAllowedDate: latestAllowedDate(clock),
       });
       if (hireEntry) {
         await tx.compensationEntry.update({
@@ -232,7 +233,7 @@ export async function terminateEmployee(
     checkTerminationDate({
       terminationDate: input.terminationDate,
       latestEntryDate: latest ? toIsoDate(latest.effectiveDate) : toIsoDate(employee.hireDate),
-      today: todayIso(clock),
+      latestAllowedDate: latestAllowedDate(clock),
     });
 
     const terminationDate = fromIsoDate(input.terminationDate);

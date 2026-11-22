@@ -135,7 +135,7 @@ describe("POST /employees/:code/compensation", () => {
       body: { ...MERIT, effectiveDate: "2023-01-01" },
       code: "NOT_AFTER_LATEST_ENTRY",
     },
-    { name: "a future date", body: { ...MERIT, effectiveDate: "2026-11-02" }, code: "FUTURE_DATE" },
+    { name: "a future date", body: { ...MERIT, effectiveDate: "2026-11-03" }, code: "FUTURE_DATE" },
   ])("rejects $name (422 $code) and writes nothing", async ({ body, code }) => {
     const res = await changePay(body);
 

@@ -6,7 +6,7 @@ import type {
 } from "@salary/shared";
 import type { PrismaClient } from "../db/client.js";
 import { diffFields } from "../domain/audit-diff.js";
-import { fromIsoDate, todayIso, toIsoDate, type Clock } from "../domain/clock.js";
+import { fromIsoDate, latestAllowedDate, toIsoDate, type Clock } from "../domain/clock.js";
 import { conflict, invalid, notFound } from "../domain/errors.js";
 import {
   checkAfterLatestEntry,
@@ -34,7 +34,7 @@ function checkNewEntryDate(employee: Employee, effectiveDate: string, clock: Clo
     effectiveDate,
     hireDate: toIsoDate(employee.hireDate),
     terminationDate: null,
-    today: todayIso(clock),
+    latestAllowedDate: latestAllowedDate(clock),
   });
   const latest = employee.compensationEntries.at(-1);
   if (latest) {
@@ -161,7 +161,7 @@ export async function correctCompensation(
         effectiveDate: input.effectiveDate!,
         hireDate: toIsoDate(employee.hireDate),
         terminationDate: employee.terminationDate ? toIsoDate(employee.terminationDate) : null,
-        today: todayIso(clock),
+        latestAllowedDate: latestAllowedDate(clock),
       });
       const previous = entries[index - 1];
       const next = entries[index + 1];

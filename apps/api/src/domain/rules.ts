@@ -10,11 +10,14 @@ export function checkPayEntryDate(input: {
   effectiveDate: string;
   hireDate: string;
   terminationDate: string | null;
-  today: string;
+  latestAllowedDate: string;
+  /** How the date is named in messages, e.g. "Hire date". */
+  label?: string;
 }): void {
-  const { effectiveDate, hireDate, terminationDate, today } = input;
-  if (effectiveDate > today) {
-    throw invalid("FUTURE_DATE", `Effective date ${effectiveDate} is in the future`);
+  const { effectiveDate, hireDate, terminationDate, latestAllowedDate } = input;
+  const label = input.label ?? "Effective date";
+  if (effectiveDate > latestAllowedDate) {
+    throw invalid("FUTURE_DATE", `${label} ${effectiveDate} is in the future`);
   }
   if (effectiveDate < hireDate) {
     throw invalid(
@@ -55,10 +58,10 @@ export function checkPromotion(input: {
 export function checkTerminationDate(input: {
   terminationDate: string;
   latestEntryDate: string;
-  today: string;
+  latestAllowedDate: string;
 }): void {
-  const { terminationDate, latestEntryDate, today } = input;
-  if (terminationDate > today) {
+  const { terminationDate, latestEntryDate, latestAllowedDate } = input;
+  if (terminationDate > latestAllowedDate) {
     throw invalid("FUTURE_DATE", `Termination date ${terminationDate} is in the future`);
   }
   if (terminationDate < latestEntryDate) {
@@ -77,10 +80,10 @@ export function checkHireDateChange(input: {
   newHireDate: string;
   firstChangeDate: string | null;
   terminationDate: string | null;
-  today: string;
+  latestAllowedDate: string;
 }): void {
-  const { newHireDate, firstChangeDate, terminationDate, today } = input;
-  if (newHireDate > today) {
+  const { newHireDate, firstChangeDate, terminationDate, latestAllowedDate } = input;
+  if (newHireDate > latestAllowedDate) {
     throw invalid("FUTURE_DATE", `Hire date ${newHireDate} is in the future`);
   }
   if (firstChangeDate && newHireDate >= firstChangeDate) {
