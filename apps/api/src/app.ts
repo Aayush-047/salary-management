@@ -3,6 +3,7 @@ import express, { type Express } from "express";
 import type { PrismaClient } from "./db/client.js";
 import { errorHandler, notFoundHandler } from "./http/errors.js";
 import { employeesRouter } from "./routes/employees.js";
+import { metaRouter } from "./routes/meta.js";
 
 export type AppDependencies = {
   corsOrigin: string;
@@ -20,6 +21,7 @@ export function createApp({ corsOrigin, prisma }: AppDependencies): Express {
     res.json({ status: "ok" });
   });
   app.use("/employees", employeesRouter(prisma));
+  app.use("/meta", metaRouter(prisma));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
