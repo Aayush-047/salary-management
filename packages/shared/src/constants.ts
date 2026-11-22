@@ -14,6 +14,7 @@ export const COMPENSATION_REASONS = [
   "PROMOTION",
   "MERIT",
   "MARKET_ADJUSTMENT",
+  "RELOCATION",
   "OTHER",
 ] as const;
 export type CompensationReason = (typeof COMPENSATION_REASONS)[number];

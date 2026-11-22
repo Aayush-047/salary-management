@@ -96,3 +96,42 @@ export function checkHireDateChange(input: {
     );
   }
 }
+
+/**
+ * A new pay change is dated after the latest existing entry. Changes are recorded in order;
+ * fixing a past entry is a correction. This keeps currencies consistent across relocations and
+ * guarantees the new entry becomes current pay.
+ */
+export function checkAfterLatestEntry(input: {
+  effectiveDate: string;
+  latestEntryDate: string;
+}): void {
+  const { effectiveDate, latestEntryDate } = input;
+  if (effectiveDate <= latestEntryDate) {
+    throw invalid(
+      "NOT_AFTER_LATEST_ENTRY",
+      `Effective date ${effectiveDate} must be after the latest pay change on ${latestEntryDate}; to fix an earlier entry, correct it instead`,
+    );
+  }
+}
+
+/** A corrected date stays strictly between the neighbouring entries, so the order never changes. */
+export function checkBetweenNeighbours(input: {
+  effectiveDate: string;
+  previousDate: string | null;
+  nextDate: string | null;
+}): void {
+  const { effectiveDate, previousDate, nextDate } = input;
+  if (previousDate && effectiveDate <= previousDate) {
+    throw invalid(
+      "NOT_AFTER_PREVIOUS_ENTRY",
+      `Effective date ${effectiveDate} must be after the previous pay entry on ${previousDate}`,
+    );
+  }
+  if (nextDate && effectiveDate >= nextDate) {
+    throw invalid(
+      "NOT_BEFORE_NEXT_ENTRY",
+      `Effective date ${effectiveDate} must be before the next pay entry on ${nextDate}`,
+    );
+  }
+}

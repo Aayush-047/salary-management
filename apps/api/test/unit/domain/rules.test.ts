@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DomainError } from "../../../src/domain/errors.js";
 import {
+  checkAfterLatestEntry,
+  checkBetweenNeighbours,
   checkHireDateChange,
   checkPayEntryDate,
   checkPromotion,
@@ -119,5 +121,41 @@ describe("checkHireDateChange", () => {
     expect(outcome(() => checkHireDateChange({ ...leaver, newHireDate: "2024-02-01" }))).toBe(
       "HIRE_AFTER_TERMINATION",
     );
+  });
+});
+
+describe("checkAfterLatestEntry", () => {
+  it.each([
+    { effectiveDate: "2024-04-02", expected: "ok" },
+    { effectiveDate: "2024-04-01", expected: "NOT_AFTER_LATEST_ENTRY" },
+    { effectiveDate: "2023-01-01", expected: "NOT_AFTER_LATEST_ENTRY" },
+  ])("$effectiveDate after 2024-04-01 → $expected", ({ effectiveDate, expected }) => {
+    expect(
+      outcome(() => checkAfterLatestEntry({ effectiveDate, latestEntryDate: "2024-04-01" })),
+    ).toBe(expected);
+  });
+});
+
+describe("checkBetweenNeighbours", () => {
+  const neighbours = { previousDate: "2022-03-01", nextDate: "2025-04-01" };
+
+  it.each([
+    { effectiveDate: "2023-06-15", expected: "ok" },
+    { effectiveDate: "2022-03-01", expected: "NOT_AFTER_PREVIOUS_ENTRY" },
+    { effectiveDate: "2025-04-01", expected: "NOT_BEFORE_NEXT_ENTRY" },
+  ])("$effectiveDate → $expected", ({ effectiveDate, expected }) => {
+    expect(outcome(() => checkBetweenNeighbours({ ...neighbours, effectiveDate }))).toBe(expected);
+  });
+
+  it("has no bound on a side without a neighbour", () => {
+    expect(
+      outcome(() =>
+        checkBetweenNeighbours({
+          effectiveDate: "2030-01-01",
+          previousDate: "2022-03-01",
+          nextDate: null,
+        }),
+      ),
+    ).toBe("ok");
   });
 });

@@ -3,6 +3,7 @@ import express, { type Express } from "express";
 import type { PrismaClient } from "./db/client.js";
 import { systemClock, type Clock } from "./domain/clock.js";
 import { errorHandler, notFoundHandler } from "./http/errors.js";
+import { compensationRouter } from "./routes/compensation.js";
 import { employeesRouter } from "./routes/employees.js";
 import { metaRouter } from "./routes/meta.js";
 
@@ -24,6 +25,7 @@ export function createApp({ corsOrigin, prisma, clock = systemClock }: AppDepend
     res.json({ status: "ok" });
   });
   app.use("/employees", employeesRouter(prisma, clock));
+  app.use("/compensation", compensationRouter(prisma, clock));
   app.use("/meta", metaRouter(prisma));
 
   app.use(notFoundHandler);
