@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler, RequestHandler } from "express";
 import type { z } from "zod";
+import { DomainError } from "../domain/errors.js";
 
 export type ErrorBody = {
   error: { code: string; message: string; details?: unknown };
@@ -51,6 +52,11 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof HttpError) {
     const body: ErrorBody = { error: { code: err.code, message: err.message } };
     if (err.details !== undefined) body.error.details = err.details;
+    res.status(err.status).json(body);
+    return;
+  }
+  if (err instanceof DomainError) {
+    const body: ErrorBody = { error: { code: err.code, message: err.message } };
     res.status(err.status).json(body);
     return;
   }
