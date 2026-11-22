@@ -17,7 +17,7 @@ const E2E_DATABASE_URL =
 
 export default defineConfig({
   testDir: "e2e",
-  // Tests share one seeded database and only read from it; one worker keeps runs predictable.
+  // Tests share one seeded database; one worker keeps runs predictable.
   workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: "list",
@@ -26,7 +26,23 @@ export default defineConfig({
     baseURL: `http://localhost:${WEB_PORT}`,
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    // Read-only checks run first and assert exact numbers from the seed.
+    {
+      name: "read-only",
+      testMatch: /employees\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    // The HR journey writes data, so it runs afterwards and is never retried: a retry would
+    // replay steps against data the first attempt already changed.
+    {
+      name: "actions",
+      testMatch: /employee-actions\.spec\.ts/,
+      dependencies: ["read-only"],
+      retries: 0,
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
   webServer: [
     {
       command: "npm run dev -w @salary/api",
