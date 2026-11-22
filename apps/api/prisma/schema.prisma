@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// Connection URL is provided by prisma.config.ts (Prisma 7).
+datasource db {
+  provider = "postgresql"
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  TERMINATED
+}
+
+enum CompensationReason {
+  HIRE
+  PROMOTION
+  MERIT
+  MARKET_ADJUSTMENT
+  OTHER
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  TERMINATE
+}
+
+enum AuditEntity {
+  EMPLOYEE
+  COMPENSATION_ENTRY
+}
+
+/// Static exchange rates. 1 unit of `currency` = `rateToUsd` USD.
+model FxRate {
+  currency  String    @id @db.Char(3)
+  rateToUsd Float
+  asOfDate  DateTime  @db.Date
+  countries Country[]
+}
+
+/// Every country's currency must have an FX rate, so conversions never hit a missing rate.
+model Country {
+  code      String     @id @db.Char(2)
+  name      String     @unique
+  currency  String     @db.Char(3)
+  fxRate    FxRate     @relation(fields: [currency], references: [currency])
+  employees Employee[]
+}
+
+model Department {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  jobTitles JobTitle[]
+}
+
+/// A job title belongs to exactly one department; employees reference only the title.
+model JobTitle {
+  id           Int        @id @default(autoincrement())
+  name         String     @unique
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+  employees    Employee[]
+
+  @@index([departmentId])
+}
+
+model Employee {
+  id                  Int                 @id @default(autoincrement())
+  employeeCode        String              @unique
+  firstName           String
+  lastName            String
+  email               String              @unique
+  countryCode         String              @db.Char(2)
+  country             Country             @relation(fields: [countryCode], references: [code])
+  jobTitleId          Int
+  jobTitle            JobTitle            @relation(fields: [jobTitleId], references: [id])
+  level               Int                 @db.SmallInt
+  hireDate            DateTime            @db.Date
+  status              EmployeeStatus      @default(ACTIVE)
+  terminationDate     DateTime?           @db.Date
+  /// Denormalised from the latest CompensationEntry; kept in sync in the same transaction.
+  currentBaseSalary   Int
+  currentTargetBonus  Int
+  currentCurrency     String              @db.Char(3)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  compensationEntries CompensationEntry[]
+  auditLogs           AuditLog[]
+
+  @@index([countryCode, jobTitleId, level])
+  @@index([status])
+}
+
+/// Amounts are whole units of `currency`.
+model CompensationEntry {
+  id            Int                @id @default(autoincrement())
+  employeeId    Int
+  employee      Employee           @relation(fields: [employeeId], references: [id])
+  effectiveDate DateTime           @db.Date
+  baseSalary    Int
+  targetBonus   Int
+  currency      String             @db.Char(3)
+  reason        CompensationReason
+  note          String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  // One entry per person per day, so "latest entry" is never ambiguous.
+  @@unique([employeeId, effectiveDate])
+}
+
+model User {
+  id        Int        @id @default(autoincrement())
+  name      String
+  auditLogs AuditLog[]
+}
+
+model AuditLog {
+  id         Int         @id @default(autoincrement())
+  actorId    Int
+  actor      User        @relation(fields: [actorId], references: [id])
+  employeeId Int
+  employee   Employee    @relation(fields: [employeeId], references: [id])
+  entityType AuditEntity
+  entityId   Int
+  action     AuditAction
+  /// [{ field, from, to }]
+  changes    Json
+  reason     String?
+  createdAt  DateTime    @default(now())
+
+  @@index([employeeId, createdAt])
+  @@index([createdAt])
+}

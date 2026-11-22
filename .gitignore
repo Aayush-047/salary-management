@@ -10,10 +10,8 @@ build/
 .next/
 coverage/
 
-# Local databases
-*.db
-*.db-journal
-*.sqlite
+# Generated Prisma client (regenerated on install)
+apps/api/src/generated/
 
 # Environment & OS
 .env
