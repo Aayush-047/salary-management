@@ -38,16 +38,16 @@ flowchart LR
 
 ## Data model
 
-| Table               | Key fields                                                                                                                                                                                                                                                                                       |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Employee`          | id, employeeCode (unique, e.g. `E00042`), firstName, lastName, email (unique), countryCode → `Country`, departmentId → `Department`, jobTitleId → `JobTitle`, level (1–6), hireDate, status (`ACTIVE`/`TERMINATED`), terminationDate, **currentBaseSalary, currentTargetBonus, currentCurrency** |
-| `CompensationEntry` | id, employeeId, effectiveDate, baseSalary, targetBonus, currency, reason (`HIRE`/`PROMOTION`/`MERIT`/`MARKET_ADJUSTMENT`/`OTHER`), note                                                                                                                                                          |
-| `Department`        | id, name (unique)                                                                                                                                                                                                                                                                                |
-| `JobTitle`          | id, name (unique)                                                                                                                                                                                                                                                                                |
-| `Country`           | code, name, currency                                                                                                                                                                                                                                                                             |
-| `FxRate`            | currency, rateToUsd, asOfDate                                                                                                                                                                                                                                                                    |
-| `AuditLog`          | id, actorId → `User`, employeeId, entityType, entityId, action (`CREATE`/`UPDATE`/`TERMINATE`), changes (JSON `[{field, from, to}]`), reason, createdAt                                                                                                                                          |
-| `User`              | id, name. Seeded with one "HR Manager"                                                                                                                                                                                                                                                           |
+| Table               | Key fields                                                                                                                                                                                                                                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Employee`          | id, employeeCode (unique, e.g. `E00042`), firstName, lastName, email (unique), countryCode → `Country`, jobTitleId → `JobTitle` (department comes from the title), level (1–6), hireDate, status (`ACTIVE`/`TERMINATED`), terminationDate, **currentBaseSalary, currentTargetBonus, currentCurrency** |
+| `CompensationEntry` | id, employeeId, effectiveDate, baseSalary, targetBonus, currency, reason (`HIRE`/`PROMOTION`/`MERIT`/`MARKET_ADJUSTMENT`/`RELOCATION`/`OTHER`); unique (employeeId, effectiveDate), note                                                                                                              |
+| `Department`        | id, name (unique)                                                                                                                                                                                                                                                                                     |
+| `JobTitle`          | id, name (unique), departmentId → `Department`                                                                                                                                                                                                                                                        |
+| `Country`           | code, name, currency                                                                                                                                                                                                                                                                                  |
+| `FxRate`            | currency, rateToUsd, asOfDate                                                                                                                                                                                                                                                                         |
+| `AuditLog`          | id, actorId → `User`, employeeId, entityType, entityId, action (`CREATE`/`UPDATE`/`TERMINATE`), changes (JSON `[{field, from, to}]`), reason, createdAt                                                                                                                                               |
+| `User`              | id, name. Seeded with one "HR Manager"                                                                                                                                                                                                                                                                |
 
 - **Money:** integers in **whole units of local currency**. Annual salaries don't need cents, JPY has no minor unit, and this avoids floating-point drift and Prisma's `Decimal`.
 - **Current compensation is stored on `Employee`.** It's recalculated from the latest entry (by effective date) in the same transaction as any entry change. Analytics then read one row per employee with no "latest entry" subquery. The cost is duplicated data, guarded by integration tests that check it matches the history.
@@ -57,20 +57,23 @@ flowchart LR
 
 ## API
 
-| Method & path                              | Purpose                                                                                 |
-| ------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `GET /employees`                           | Search, filters (country, dept, title, level, status), sort, pagination                 |
-| `GET /employees/:id`                       | Profile + current comp                                                                  |
-| `POST /employees` · `PATCH /employees/:id` | Create / edit (edit requires a reason)                                                  |
-| `POST /employees/:id/terminate`            | Soft-terminate                                                                          |
-| `GET/POST /employees/:id/compensation`     | Timeline / add a pay change                                                             |
-| `PATCH /compensation/:entryId`             | Correct a mistake (reason required)                                                     |
-| `GET /audit` · `GET /employees/:id/audit`  | Org-wide / per-employee audit                                                           |
-| `POST /imports/employees`                  | CSV upload. `201 {imported}` or `422 {errors: [{row, field, message}]}`, all-or-nothing |
-| `GET /insights/pay-stats`                  | `groupBy`, `metric=base\|total`, `currency`, filters                                    |
-| `GET /insights/outliers`                   | `low`, `high`, `minPeers`, `metric`, filters                                            |
-| `GET /insights/recent-changes`             | Raises within `from`–`to`                                                               |
-| `GET /meta`                                | Countries, departments, titles, levels, FX rates + as-of date, outlier defaults         |
+| Method & path                        | Purpose                                                                                 |
+| ------------------------------------ | --------------------------------------------------------------------------------------- |
+| `GET /employees`                     | Search, filters (country, dept, title, level, status), sort, pagination                 |
+| `GET /employees/:code`               | Profile, current pay and pay timeline (newest first, % change per entry)                |
+| `GET /employees/:code/audit`         | That employee's change history (who, when, field changes, reason)                       |
+| `POST /employees`                    | Create, with starting pay as the HIRE entry; next code generated                        |
+| `PATCH /employees/:code`             | Edit name, email, title, level, hire date (reason required)                             |
+| `POST /employees/:code/compensation` | New pay entry; a promotion may also change level/title in the same event                |
+| `POST /employees/:code/relocate`     | New country and pay in its currency, as one event                                       |
+| `POST /employees/:code/terminate`    | Soft-terminate (end date + reason)                                                      |
+| `PATCH /compensation/:id`            | Correct a pay entry's amounts or date (reason required; allowed for leavers)            |
+| `GET /audit`                         | Org-wide audit _(planned)_                                                              |
+| `POST /imports/employees`            | CSV upload. `201 {imported}` or `422 {errors: [{row, field, message}]}`, all-or-nothing |
+| `GET /insights/pay-stats`            | `groupBy`, `metric=base\|total`, `currency`, filters                                    |
+| `GET /insights/outliers`             | `low`, `high`, `minPeers`, `metric`, filters                                            |
+| `GET /insights/recent-changes`       | Raises within `from`–`to`                                                               |
+| `GET /meta`                          | Countries, departments, titles, levels, FX rates + as-of date, outlier defaults         |
 
 Errors use one JSON shape: `{error: {code, message, details?}}`. Invalid input returns
 `400 VALIDATION_ERROR` with one `details` entry per field; malformed JSON returns `400 INVALID_JSON`.
@@ -93,6 +96,35 @@ Errors use one JSON shape: `{error: {code, message, details?}}`. Invalid input r
   data grows by orders of magnitude. A tie-break on `id` keeps pages stable.
 - `GET /meta` returns countries, departments with their titles, levels, FX rates with their
   as-of date and outlier defaults in one call (`Cache-Control: max-age=300`).
+
+### Changing employees: rules and audit
+
+- **One transaction per write:** check the rules → apply the change → re-sync the employee's
+  current pay from their latest entry → write one audit row. If anything fails nothing is
+  saved (a mutation check that broke the audit write confirmed the employee and pay entry roll
+  back).
+- **One audit row per action**, with every changed field as `{field, from, to}` and the reason.
+  A promotion (pay + level/title) and a relocation (country + currency + pay) are single events.
+  Edits that change nothing are rejected rather than audited.
+- **Date rules:**
+  - _No future dates._ "Today" is the calendar date in **UTC+14**, the furthest-ahead time zone.
+    Comparing with the UTC date rejected "today" for users east of UTC every morning (found in a
+    browser run at 00:30 local time); this rule never accepts a date that hasn't started
+    somewhere and needs no knowledge of the user's time zone.
+  - Pay entries fall within employment (not before hire, not after termination).
+  - **A new pay change must be dated after the latest entry** (so at most one per day). Without
+    this, a backdated change could land before a relocation and take the wrong currency, or
+    never become current pay. Earlier entries are fixed with a correction instead.
+  - A corrected date stays strictly between its neighbouring entries; the hire entry's date is
+    the hire date and moves only when the hire date is edited (which must stay before the
+    first pay change).
+  - Termination is on or after the latest pay change.
+- **Other rules:** promotions change level and/or title and never lower the level; relocation
+  needs a different, known country and the server sets the currency; leavers are read-only
+  except for pay corrections; emails are unique.
+- **Errors:** 404 (unknown employee/entry), 409 (state forbids it: email in use, employee has
+  left), 422 (the change breaks a rule), each with a stable `code` and a plain-words `message`.
+- **Clock:** the app takes an injectable clock, so tests pin "today" and stay deterministic.
 
 ## Analytics
 
@@ -133,6 +165,21 @@ A global **display-currency selector** in the header (state in the URL) controls
 - The table keeps the previous page visible (dimmed) while the next one loads, and has
   loading, empty ("Clear filters") and error ("Try again") states.
 
+### Employee detail and actions
+
+- `/employees/:code`, opened from a list row; **Back** restores the exact filtered list view.
+  Shows current pay, profile, the pay timeline (reason tags, % change, "New currency" on
+  relocation) and the change history (headline, who/when, reason, field old → new).
+- Actions for active employees: **Change pay** (promotion fields appear when chosen, live % vs
+  current), **Edit profile**, **Relocate** (shows current pay converted at the static rate as a
+  starting point), **Terminate**. **Correct** is on every pay entry, leavers included.
+  **Add employee** is on the list and opens the new employee afterwards.
+- Forms validate with the same shared schemas as the API before sending. Messages are written
+  for HR ("Choose a country", "Must be more than 0") in the shared schemas, so the API returns the
+  same wording. API field errors map onto fields; business-rule errors show in the API's words.
+- Success notifications appear bottom-right; top-right covered the action buttons for several
+  seconds (found because an e2e click waited 5 s for the button to be uncovered).
+
 ## Testing
 
 - **Unit (Vitest, no DB, milliseconds):** FX conversion, compa-ratio classification, CSV row validation, audit diff builder, zod schemas.
@@ -144,7 +191,10 @@ A global **display-currency selector** in the header (state in the URL) controls
   Kept out of `npm test` so the fast suite stays fast.
 - **Safety:** test and e2e setup refuse any database whose name doesn't end in `_test` /
   `_e2e`, so a misconfigured URL can never truncate dev or production data.
-- **Current size:** 153 unit + integration tests (shared 21, API 111, web 21) and 6 e2e tests.
+- **Two Playwright projects:** `read-only` (list checks with exact seed numbers) runs first;
+  `actions` (an HR journey: add, promote, correct with a rule error, terminate) depends on it and
+  has retries off, because a retry would replay steps against data the first attempt changed.
+- **Current size:** 303 unit + integration tests (shared 55, API 200, web 48) and 11 e2e tests.
 
 ## Performance
 
@@ -180,7 +230,8 @@ A global **display-currency selector** in the header (state in the URL) controls
 
 ## Known issues
 
-| Issue                                                                                                                                                                                                                          | Risk                                                                                                                   | Plan                                                                                                                                                                            |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm audit`: high-severity ReDoS in `effect` ≤ 3.22.0 ([GHSA-7589-6fvf-x4pw](https://github.com/advisories/GHSA-7589-6fvf-x4pw)), pulled in by the Prisma CLI (`prisma` → `@prisma/config` → `effect@3.20.0`, pinned exactly). | Negligible. Dev-time CLI only: it parses our own config file, never user input, and is not part of the runtime client. | Remove when Prisma updates its pin. `npm audit fix --force` would downgrade Prisma to v6, and an npm `overrides` entry did not apply cleanly against the pin (see AI_USAGE.md). |
-| Web production bundle is 624 kB (190 kB gzipped), above Vite's 500 kB warning; most of it is Mantine.                                                                                                                          | Low for an internal tool on office networks.                                                                           | Split routes into lazily loaded chunks in the wrap-up step if time allows.                                                                                                      |
+| Issue                                                                                                                                                                                                                                                                          | Risk                                                                                                                   | Plan                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm audit`: high-severity ReDoS in `effect` ≤ 3.22.0 ([GHSA-7589-6fvf-x4pw](https://github.com/advisories/GHSA-7589-6fvf-x4pw)), pulled in by the Prisma CLI (`prisma` → `@prisma/config` → `effect@3.20.0`, pinned exactly).                                                 | Negligible. Dev-time CLI only: it parses our own config file, never user input, and is not part of the runtime client. | Remove when Prisma updates its pin. `npm audit fix --force` would downgrade Prisma to v6, and an npm `overrides` entry did not apply cleanly against the pin (see AI_USAGE.md). |
+| Web production bundle is 624 kB (190 kB gzipped), above Vite's 500 kB warning; most of it is Mantine.                                                                                                                                                                          | Low for an internal tool on office networks.                                                                           | Split routes into lazily loaded chunks in the wrap-up step if time allows.                                                                                                      |
+| `pg` prints "Calling client.query() when the client is already executing a query is deprecated" during some transactions. Reproduced with a single `findFirst({ include })` inside `$transaction`: Prisma's adapter runs the include's queries concurrently on one connection. | None today: `pg` 8 queues the queries. It becomes an error in `pg` 9.                                                  | Not our code; keep `pg` on 8 until Prisma's adapter handles it, then upgrade both together.                                                                                     |

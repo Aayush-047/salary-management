@@ -51,7 +51,16 @@ countries. Built step by step in pair-programming style with AI.
   state lives in the URL (shared schema). Filters live only in a modal (Apply / Reset /
   Cancel); the Filters button shows a count badge; no filter chips.
 - E2E: Playwright on ports 3100/5174 against `salary_e2e`, rebuilt and seeded before each run;
-  `npm run test:e2e`, separate from `npm test`.
+  `npm run test:e2e`, separate from `npm test`. Projects: `read-only` first, then `actions`
+  (writes data, retries off).
+- Employee changes (rules in docs/DESIGN.md): employees addressed by code in URLs; every write
+  is one transaction with one audit row; new pay changes must be after the latest entry (no
+  backdating; fix old entries via corrections); "no future dates" means not after today in
+  UTC+14; relocation is one event with a RELOCATION pay entry; leavers are read-only except
+  pay corrections.
+- User-facing validation messages live in the shared zod schemas (plain words for HR).
+- Long-running dev servers started for checks don't reload: restart them after code changes.
+  Use absolute paths in commands that matter (the shell's directory can persist).
 - Check UI changes with Playwright screenshots (scratchpad script) before committing; fix any
   console errors they reveal.
 - Dependencies resolve to recent majors; verify library APIs in node_modules before use.

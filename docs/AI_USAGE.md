@@ -162,3 +162,43 @@ folders). The AI noticed because the check output didn't add up (missing API tes
 failed request, "file not found" from the leak scan), stopped, located the moved folder,
 explained what happened and asked before moving it back. It then confirmed `git status`
 showed only the intended changes and re-ran every check before committing.
+
+## 7. Employee detail and actions
+
+Prompt (summarised): the AI proposed the API, business rules and UI for viewing and changing
+employees, with options, then built it in eight commits, each checked before committing.
+
+| Decision         | AI suggested                                                                 | Outcome                                                                                                                                    |
+| ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Detail view      | Separate page `/employees/:code`                                             | Accepted                                                                                                                                   |
+| Changing country | A "Relocate" action: new country + pay in its currency as one event          | Accepted                                                                                                                                   |
+| Pay changes      | One "Change pay" form; promotions add level/title in the same event          | Accepted                                                                                                                                   |
+| Add employee     | Include it in this step                                                      | Accepted                                                                                                                                   |
+| Backdating       | New pay changes must be after the latest entry; fix old ones via corrections | **Proposed by the AI after starting**, flagged for my confirmation with the reasoning (currency consistency across relocations). Accepted. |
+
+Verification and what it caught:
+
+- **Rollback:** the AI temporarily broke the last step of creating an employee (the audit
+  write) and confirmed nothing was left behind: 0 employees, 0 pay entries, 0 audit rows.
+- **A time zone bug**, found only because a browser run happened at 00:30 my time: "today" was
+  computed in UTC, so anyone east of UTC was told today's date was in the future each morning.
+  Fixed by treating "today" as the date in UTC+14, with a unit test at the exact boundary.
+- **Developer-facing messages** ("expected string to have >=1 characters") spotted in a
+  screenshot; rewritten in plain words in the shared schemas, with tests.
+- **Notifications covering buttons**, spotted because one e2e step took 5.8 s while others took
+  under 1 s. A Playwright trace showed a single click waiting ~5 s for the button to be uncovered.
+  Moving notifications to the bottom-right brought the step to 0.7 s.
+- **A redundant request:** the detail page fetched the audit history even for unknown employees.
+- **A library warning traced, not ignored:** a `pg` deprecation warning was traced into
+  Prisma's adapter and reproduced with one line (`findFirst` with `include` inside a
+  transaction); documented as a known issue instead of restructuring our queries.
+
+The AI's own slips, caught and corrected:
+
+- Ran a test command from the wrong folder (the shell had stayed in `apps/api`) and reported
+  it before rerunning from the repo root.
+- Checked a fix against an API server it had started earlier without file watching, so the
+  browser showed the old behaviour; noticed from the old message wording and restarted it.
+- Two `grep` checks misreported (regex characters in the pattern); verified the files directly.
+- A screenshot script read the previous step's notification; rewritten to wait for each step's
+  own message.
