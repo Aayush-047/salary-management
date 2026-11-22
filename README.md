@@ -27,19 +27,20 @@ Open http://localhost:5173.
 
 ## Scripts
 
-| Script                                    | What it does                                                             |
-| ----------------------------------------- | ------------------------------------------------------------------------ |
-| `npm run dev`                             | Start API and web in watch mode                                          |
-| `npm test`                                | Run all tests (integration tests need `db:up`)                           |
-| `npm run test:unit -w @salary/api`        | API unit tests only (no database)                                        |
-| `npm run test:integration -w @salary/api` | API integration tests against the `salary_test` database                 |
-| `npm run db:migrate` / `db:seed`          | Apply migrations / seed reference data + 10,000 employees (dev database) |
-| `npm run db:reset`                        | Wipe the dev database, re-apply migrations and reseed                    |
-| `npm run typecheck`                       | Type-check every workspace                                               |
-| `npm run lint`                            | Lint the whole repo                                                      |
-| `npm run format`                          | Format with Prettier                                                     |
-| `npm run build`                           | Production build of every workspace                                      |
-| `npm run db:up` / `db:down`               | Start / stop the Postgres container                                      |
+| Script                                    | What it does                                                                                                                               |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run dev`                             | Start API and web in watch mode                                                                                                            |
+| `npm test`                                | Run all tests (integration tests need `db:up`)                                                                                             |
+| `npm run test:unit -w @salary/api`        | API unit tests only (no database)                                                                                                          |
+| `npm run test:integration -w @salary/api` | API integration tests against the `salary_test` database                                                                                   |
+| `npm run test:e2e`                        | Browser tests (Playwright) on ports 3100/5174 against a freshly seeded `salary_e2e` database; first run: `npx playwright install chromium` |
+| `npm run db:migrate` / `db:seed`          | Apply migrations / seed reference data + 10,000 employees (dev database)                                                                   |
+| `npm run db:reset`                        | Wipe the dev database, re-apply migrations and reseed                                                                                      |
+| `npm run typecheck`                       | Type-check every workspace                                                                                                                 |
+| `npm run lint`                            | Lint the whole repo                                                                                                                        |
+| `npm run format`                          | Format with Prettier                                                                                                                       |
+| `npm run build`                           | Production build of every workspace                                                                                                        |
+| `npm run db:up` / `db:down`               | Start / stop the Postgres container                                                                                                        |
 
 ## Repository layout
 

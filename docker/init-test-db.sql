@@ -1,1 +1,2 @@
 CREATE DATABASE salary_test;
+CREATE DATABASE salary_e2e;

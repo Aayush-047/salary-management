@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { assertIsTestDatabaseUrl } from "./safety.js";
+import { assertIsTestDatabaseUrl } from "../../src/db/safety.js";
 
 /** Runs once per test run: checks the target is a test database, then applies migrations. */
 export default function setup(): void {
