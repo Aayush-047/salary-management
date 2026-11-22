@@ -47,3 +47,29 @@ with trade-offs, then reviewed the full DESIGN.md draft in chat before it was wr
 | Current comp storage | Stored on Employee, synced in-transaction           | Accepted                                                                                                                                                                                                                                                                                                |
 | Departments / titles | Reference tables                                    | Accepted                                                                                                                                                                                                                                                                                                |
 | Outlier rule         | Peer compa-ratio, fixed band 0.80–1.20, min group 5 | I asked for an explanation with an example first. **Extended:** HR can adjust the band in the UI, with these as defaults.                                                                                                                                                                               |
+
+## 3. Scaffolding
+
+Prompt (summarised): I asked the AI to propose the repo layout and tooling, show every
+config file in chat before writing it, and verify each commit (tests, typecheck, lint,
+a live run) before committing.
+
+| Decision             | AI suggested                                           | Outcome                                                                                                                  |
+| -------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Lint / format        | ESLint + Prettier                                      | Accepted                                                                                                                 |
+| Local database       | Docker Compose, separate dev and test databases        | Accepted                                                                                                                 |
+| Quality gate         | CI (GitHub Actions) instead of pre-commit hooks        | I asked for an explanation of both, then **accepted CI only**                                                            |
+| Docs formatting      | Keep Markdown out of Prettier                          | **Overridden:** format docs too. The AI checked the diff was whitespace-only and put it in its own `style(docs)` commit. |
+| Pushing              | Push after every step                                  | **Overridden:** push at the end, since commit timestamps (not push times) show how the work evolved                      |
+| Prisma timing        | Add it with the real schema, not as an empty file      | Accepted                                                                                                                 |
+| Browser verification | Playwright in the repo, added with the first real page | Accepted                                                                                                                 |
+
+Where AI verification caught problems:
+
+- `npm install -w <new workspace>` silently installed nothing (twice). Caught by
+  checking package.json afterwards and rerunning.
+- `@types/node` resolved to v26 while the runtime is Node 24, so it was pinned to 24.
+- Several dependencies resolved to major versions newer than the AI knew well (ESLint 10,
+  TypeScript 6, Mantine 9, React Router 8, Vite 8). It checked their exports and config
+  names in node_modules before writing code, rather than trusting memory.
+- The AI couldn't see the browser and said so. I confirmed the UI rendered.

@@ -44,3 +44,7 @@ countries. Built step by step in pair-programming style with AI.
 - Money: integers in whole units of local currency.
 - Outliers: peer compa-ratio = pay ÷ peer median; defaults 0.80–1.20, min group 5,
   adjustable by HR in the UI.
+- Process: CI via GitHub Actions (no pre-commit hooks); push to a private repo at the end
+  (needed before deploy).
+- Browser checks / e2e: Playwright, added with the first real UI page.
+- Dependencies resolve to recent majors; verify library APIs in node_modules before use.
