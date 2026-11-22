@@ -1,5 +1,5 @@
 import type { CompensationEntryView } from "@salary/shared";
-import { Badge, Table, Text } from "@mantine/core";
+import { Badge, Button, Table, Text } from "@mantine/core";
 import { formatMoney } from "../../lib/money";
 import { formatChangePct, reasonLabel } from "./format";
 
@@ -31,7 +31,13 @@ function Change({ entry }: { entry: CompensationEntryView }) {
 }
 
 /** Pay history, newest first. */
-export function PayTimeline({ entries }: { entries: CompensationEntryView[] }) {
+export function PayTimeline({
+  entries,
+  onCorrect,
+}: {
+  entries: CompensationEntryView[];
+  onCorrect: (entry: CompensationEntryView) => void;
+}) {
   return (
     <Table.ScrollContainer minWidth={760}>
       <Table verticalSpacing="sm" aria-label="Pay history">
@@ -44,6 +50,7 @@ export function PayTimeline({ entries }: { entries: CompensationEntryView[] }) {
             <Table.Th ta="right">Target bonus</Table.Th>
             <Table.Th ta="right">Total cash</Table.Th>
             <Table.Th>Note</Table.Th>
+            <Table.Th />
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -65,6 +72,16 @@ export function PayTimeline({ entries }: { entries: CompensationEntryView[] }) {
                 <Text size="sm" c={entry.note ? undefined : "dimmed"}>
                   {entry.note ?? "—"}
                 </Text>
+              </Table.Td>
+              <Table.Td ta="right">
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  onClick={() => onCorrect(entry)}
+                  aria-label={`Correct the ${entry.effectiveDate} entry`}
+                >
+                  Correct
+                </Button>
               </Table.Td>
             </Table.Tr>
           ))}

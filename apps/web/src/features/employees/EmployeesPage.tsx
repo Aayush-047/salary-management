@@ -1,5 +1,8 @@
 import { Alert, Button, Group, Pagination, Paper, Select, Stack, Text, Title } from "@mantine/core";
+import { IconUserPlus } from "@tabler/icons-react";
+import { useState } from "react";
 import { useEmployees, useMeta } from "../../api/queries";
+import { AddEmployeeModal } from "../employee-actions/AddEmployeeModal";
 import { EmployeeFilters } from "./EmployeeFilters";
 import { EmployeeTable } from "./EmployeeTable";
 import { hasActiveFilters } from "./url-state";
@@ -9,6 +12,7 @@ const PAGE_SIZES = ["25", "50", "100"];
 
 export function EmployeesPage() {
   const { query, update, reset } = useEmployeeListQuery();
+  const [adding, setAdding] = useState(false);
   const meta = useMeta();
   const employees = useEmployees(query);
   const data = employees.data;
@@ -19,7 +23,12 @@ export function EmployeesPage() {
 
   return (
     <Stack gap="md">
-      <Title order={2}>Employees</Title>
+      <Group justify="space-between">
+        <Title order={2}>Employees</Title>
+        <Button leftSection={<IconUserPlus size={16} />} onClick={() => setAdding(true)}>
+          Add employee
+        </Button>
+      </Group>
 
       <EmployeeFilters
         query={query}
@@ -84,6 +93,7 @@ export function EmployeesPage() {
           </Group>
         </Group>
       )}
+      <AddEmployeeModal opened={adding} meta={meta.data} onClose={() => setAdding(false)} />
     </Stack>
   );
 }

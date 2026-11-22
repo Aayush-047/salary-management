@@ -15,8 +15,11 @@ export class ApiError extends Error {
 
 type ErrorBody = { error?: { code?: string; message?: string; details?: unknown } };
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { headers: { Accept: "application/json" } });
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: { Accept: "application/json", ...init.headers },
+  });
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as ErrorBody;
     throw new ApiError(
@@ -27,4 +30,17 @@ export async function apiGet<T>(path: string): Promise<T> {
     );
   }
   return (await res.json()) as T;
+}
+
+export function apiGet<T>(path: string): Promise<T> {
+  return request<T>(path);
+}
+
+/** Sends a JSON body (POST/PATCH) and returns the parsed JSON response. */
+export function apiSend<T>(method: "POST" | "PATCH", path: string, body: unknown): Promise<T> {
+  return request<T>(path, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }

@@ -1,4 +1,4 @@
-import type { EmployeeDetail } from "@salary/shared";
+import type { CompensationEntryView, EmployeeDetail } from "@salary/shared";
 import {
   Alert,
   Anchor,
@@ -13,10 +13,15 @@ import {
   Title,
 } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import { ApiError } from "../../api/client";
-import { useEmployee, useEmployeeAudit } from "../../api/queries";
+import { useEmployee, useEmployeeAudit, useMeta } from "../../api/queries";
+import { ChangePayModal } from "../employee-actions/ChangePayModal";
+import { CorrectEntryModal } from "../employee-actions/CorrectEntryModal";
+import { EditProfileModal } from "../employee-actions/EditProfileModal";
+import { RelocateModal } from "../employee-actions/RelocateModal";
+import { TerminateModal } from "../employee-actions/TerminateModal";
 import { formatMoney } from "../../lib/money";
 import { AuditHistory } from "./AuditHistory";
 import { PayTimeline } from "./PayTimeline";
@@ -86,6 +91,10 @@ export function EmployeeDetailPage() {
   const employee = useEmployee(code);
   // Only ask for the history once the employee is known to exist.
   const audit = useEmployeeAudit(code, { enabled: employee.isSuccess });
+  const meta = useMeta();
+  const [action, setAction] = useState<"edit" | "pay" | "relocate" | "terminate" | null>(null);
+  const [correcting, setCorrecting] = useState<CompensationEntryView | null>(null);
+  const closeAction = () => setAction(null);
 
   const back = (
     <Anchor component={Link} to={backTo} size="sm">
@@ -133,20 +142,38 @@ export function EmployeeDetailPage() {
   }
 
   const e = employee.data;
+  const active = e.status === "ACTIVE";
   return (
     <Stack gap="md">
       {back}
-      <Group gap="sm" align="center">
-        <Title order={2}>
-          {e.firstName} {e.lastName}
-        </Title>
-        <Badge variant="outline" color="gray">
-          {e.employeeCode}
-        </Badge>
-        {e.status === "TERMINATED" ? (
-          <Badge color="gray">Left {e.terminationDate}</Badge>
-        ) : (
-          <Badge color="green">Active</Badge>
+      <Group justify="space-between" align="center" wrap="wrap">
+        <Group gap="sm" align="center">
+          <Title order={2}>
+            {e.firstName} {e.lastName}
+          </Title>
+          <Badge variant="outline" color="gray">
+            {e.employeeCode}
+          </Badge>
+          {active ? (
+            <Badge color="green">Active</Badge>
+          ) : (
+            <Badge color="gray">Left {e.terminationDate}</Badge>
+          )}
+        </Group>
+        {/* Leavers are read-only; their pay entries can still be corrected below. */}
+        {active && (
+          <Group gap="xs">
+            <Button onClick={() => setAction("pay")}>Change pay</Button>
+            <Button variant="default" onClick={() => setAction("edit")}>
+              Edit profile
+            </Button>
+            <Button variant="default" onClick={() => setAction("relocate")}>
+              Relocate
+            </Button>
+            <Button variant="subtle" color="red" onClick={() => setAction("terminate")}>
+              Terminate
+            </Button>
+          </Group>
         )}
       </Group>
       <Text c="dimmed" mt={-8}>
@@ -164,7 +191,7 @@ export function EmployeeDetailPage() {
       </Section>
 
       <Section title="Pay history">
-        <PayTimeline entries={e.compensation} />
+        <PayTimeline entries={e.compensation} onCorrect={setCorrecting} />
       </Section>
 
       <Section title="Change history">
@@ -178,6 +205,27 @@ export function EmployeeDetailPage() {
           <AuditHistory items={audit.data.items} />
         )}
       </Section>
+
+      <ChangePayModal
+        opened={action === "pay"}
+        employee={e}
+        meta={meta.data}
+        onClose={closeAction}
+      />
+      <EditProfileModal
+        opened={action === "edit"}
+        employee={e}
+        meta={meta.data}
+        onClose={closeAction}
+      />
+      <RelocateModal
+        opened={action === "relocate"}
+        employee={e}
+        meta={meta.data}
+        onClose={closeAction}
+      />
+      <TerminateModal opened={action === "terminate"} employee={e} onClose={closeAction} />
+      <CorrectEntryModal entry={correcting} onClose={() => setCorrecting(null)} />
     </Stack>
   );
 }
