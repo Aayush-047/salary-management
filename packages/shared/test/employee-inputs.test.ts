@@ -150,3 +150,44 @@ describe("RelocateSchema / TerminateSchema", () => {
     ).toBe(true);
   });
 });
+
+describe("messages are written for the HR user", () => {
+  const messages = (input: object) =>
+    Object.fromEntries(
+      (CreateEmployeeSchema.safeParse(input).error?.issues ?? []).map((i) => [
+        i.path.join("."),
+        i.message,
+      ]),
+    );
+
+  it("explains every missing field in plain words", () => {
+    expect(
+      messages({
+        firstName: "",
+        lastName: "",
+        email: "",
+        countryCode: "",
+        jobTitle: "",
+        hireDate: "",
+      }),
+    ).toEqual({
+      firstName: "Required",
+      lastName: "Required",
+      email: "Enter a valid email address",
+      countryCode: "Choose a country",
+      jobTitle: "Choose a job title",
+      level: "Choose a level",
+      hireDate: "Enter a date as YYYY-MM-DD",
+      baseSalary: "Enter an amount",
+      targetBonus: "Enter an amount (0 if none)",
+    });
+  });
+
+  it("explains out-of-range values", () => {
+    expect(messages({ ...VALID_EMPLOYEE, baseSalary: 0, targetBonus: -5, level: 9 })).toEqual({
+      baseSalary: "Must be more than 0",
+      targetBonus: "Can't be negative",
+      level: "Choose a level from L1 to L6",
+    });
+  });
+});
