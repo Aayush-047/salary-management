@@ -17,7 +17,8 @@ if (!root) throw new Error("Root element #root not found");
 createRoot(root).render(
   <StrictMode>
     <MantineProvider>
-      <Notifications position="top-right" />
+      {/* Bottom-right: top-right would cover the page's action buttons for several seconds. */}
+      <Notifications position="bottom-right" />
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <App />
