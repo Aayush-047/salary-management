@@ -19,7 +19,7 @@ cp .env.example .env
 npm install
 npm run db:up      # Postgres in Docker (dev + test databases)
 npm run db:migrate # apply migrations to the dev database
-npm run db:seed    # reference data (countries, FX rates, departments, job titles)
+npm run db:seed    # reference data + 10,000 employees
 npm run dev        # API on :3000, web on :5173
 ```
 
@@ -27,18 +27,19 @@ Open http://localhost:5173.
 
 ## Scripts
 
-| Script                                    | What it does                                             |
-| ----------------------------------------- | -------------------------------------------------------- |
-| `npm run dev`                             | Start API and web in watch mode                          |
-| `npm test`                                | Run all tests (integration tests need `db:up`)           |
-| `npm run test:unit -w @salary/api`        | API unit tests only (no database)                        |
-| `npm run test:integration -w @salary/api` | API integration tests against the `salary_test` database |
-| `npm run db:migrate` / `db:seed`          | Apply migrations / seed reference data (dev database)    |
-| `npm run typecheck`                       | Type-check every workspace                               |
-| `npm run lint`                            | Lint the whole repo                                      |
-| `npm run format`                          | Format with Prettier                                     |
-| `npm run build`                           | Production build of every workspace                      |
-| `npm run db:up` / `db:down`               | Start / stop the Postgres container                      |
+| Script                                    | What it does                                                             |
+| ----------------------------------------- | ------------------------------------------------------------------------ |
+| `npm run dev`                             | Start API and web in watch mode                                          |
+| `npm test`                                | Run all tests (integration tests need `db:up`)                           |
+| `npm run test:unit -w @salary/api`        | API unit tests only (no database)                                        |
+| `npm run test:integration -w @salary/api` | API integration tests against the `salary_test` database                 |
+| `npm run db:migrate` / `db:seed`          | Apply migrations / seed reference data + 10,000 employees (dev database) |
+| `npm run db:reset`                        | Wipe the dev database, re-apply migrations and reseed                    |
+| `npm run typecheck`                       | Type-check every workspace                                               |
+| `npm run lint`                            | Lint the whole repo                                                      |
+| `npm run format`                          | Format with Prettier                                                     |
+| `npm run build`                           | Production build of every workspace                                      |
+| `npm run db:up` / `db:down`               | Start / stop the Postgres container                                      |
 
 ## Repository layout
 

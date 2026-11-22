@@ -74,7 +74,7 @@ Where AI verification caught problems:
   names in node_modules before writing code, rather than trusting memory.
 - The AI couldn't see the browser and said so. I confirmed the UI rendered.
 
-## 4. Data model (in progress)
+## 4. Data model
 
 Decisions: job titles belong to departments (employee stores only the title); illustrative
 FX rates; shared package consumed as TS source in dev/tests and compiled output in
@@ -101,3 +101,22 @@ The AI stopped, reported the failure, restored the lockfile from git, and reinst
 `npm ci`. All checks passed against the last commit. I then chose to document the advisory
 instead (negligible risk, dev-only). Lessons recorded as project rules: run tools with
 `npx --no-install`, and treat a "clean" result that follows a failed step as unverified.
+
+## 5. Seed data
+
+Prompt (summarised): before writing the generator, the AI asked six realism questions
+(pay model, workforce mix, history depth, audit rows for seeded data, leavers and planted
+outliers, names), each with a recommendation. I accepted all six.
+
+Verification and what it caught:
+
+- The tests check the whole 10k output: database rules, history invariants, and a mix within
+  2 percentage points of the weights. Fixed seeds make the statistical checks non-flaky.
+- An edit meant to replace invisible combining characters in a regex silently changed
+  nothing. The AI found it by inspecting the file's bytes, then fixed it.
+- The AI flagged that the history came out smaller than its own estimate (21.7k entries vs
+  ~25–30k), rather than leaving the estimate standing.
+- A rollback test proves one bad row leaves zero rows behind.
+- Prisma 7 refused `migrate reset` because an AI agent ran it. The AI stopped, explained the
+  command, its effect and its target (the local `salary_dev`), and asked. I consented
+  explicitly before it ran.

@@ -115,8 +115,25 @@ A global **display-currency selector** in the header (state in the URL) controls
   - `CompensationEntry(employeeId, effectiveDate)`
   - `AuditLog(employeeId, createdAt)`
 - Aggregation happens in Postgres. Current comp is stored on `Employee`, so stats never scan history.
-- The seed inserts in batches (`createMany`).
+- The seed inserts in batches (`createMany`) in one transaction: 10k employees and 21.7k entries in 2.8 s.
 - Target: list and insight endpoints under 300 ms server-side on 10k employees. To be measured and recorded here once built.
+
+## Seed data
+
+- **Deterministic:** a pure generator with a fixed seed (42) and reference date (2026-11-01),
+  so every machine gets the identical dataset. The wall clock is never used.
+- **Pay model:** country base × title factor × level factor × ±10% spread; target bonus %
+  rises with level (doubled for sales). Tables live in `apps/api/prisma/seed/pay-model.ts`.
+- **Workforce mix:** weighted countries and departments, a level pyramid, managers only at
+  L4–L6 and SDRs only at L1–L3.
+- **History:** built backwards from current pay: the hire entry plus 0–4 merit, promotion or
+  market changes, so the latest entry always equals current pay.
+- **Leavers and outliers:** ~6% terminated; ~2% of active employees deliberately paid far
+  from their peers (compa-ratio 0.60–0.75 or 1.30–1.50), so outlier detection has
+  something real to find.
+- **No audit rows:** seeded records represent data migrated before go-live.
+- **Measured** (local Docker Postgres): 10,000 employees and 21,697 compensation entries;
+  generation ~20 ms; full seed 2.8 s; reset + seed 3.8 s.
 
 ## Known issues
 

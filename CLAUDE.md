@@ -32,7 +32,8 @@ countries. Built step by step in pair-programming style with AI.
   No gender/pay-equity analysis.
 - Data entry: forms + CSV import (validate everything; all-or-nothing).
 - Leavers: soft status (terminated + end date), excluded from analytics by default.
-- Seed: deterministic, 10,000 employees, ~7 countries.
+- Seed: deterministic (seed 42, reference date 2026-11-01), 10,000 employees, ~6% leavers,
+  ~2% planted outliers, no audit rows.
 - Stack (details: docs/DESIGN.md): TypeScript monorepo (npm workspaces: apps/api,
   apps/web, packages/shared). API: Express + Prisma + PostgreSQL. Web: React + Vite +
   Mantine + TanStack Query. Web, API and DB deployed separately.
@@ -50,3 +51,6 @@ countries. Built step by step in pair-programming style with AI.
 - Dependencies resolve to recent majors; verify library APIs in node_modules before use.
 - Run local tools with `npx --no-install` (or npm scripts), never bare `npx`: if a tool is
   missing, bare npx silently downloads whatever version the registry has.
+- Destructive DB commands (`prisma migrate reset`): Prisma blocks AI agents. Explain the
+  command, its effect and its target, and ask the user explicitly. Only ever run them
+  against `salary_dev` / `salary_test`.
