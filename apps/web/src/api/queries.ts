@@ -1,7 +1,13 @@
-import type { EmployeeListQuery, EmployeeListResponse, MetaResponse } from "@salary/shared";
+import type {
+  AuditListResponse,
+  EmployeeDetail,
+  EmployeeListQuery,
+  EmployeeListResponse,
+  MetaResponse,
+} from "@salary/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toSearchParams } from "../features/employees/url-state";
-import { apiGet } from "./client";
+import { ApiError, apiGet } from "./client";
 
 /** Reference data for filters and labels; it changes rarely. */
 export function useMeta() {
@@ -21,5 +27,28 @@ export function useEmployees(query: EmployeeListQuery) {
       return apiGet<EmployeeListResponse>(`/employees${params ? `?${params}` : ""}`);
     },
     placeholderData: keepPreviousData,
+  });
+}
+
+/** Don't retry requests that can't succeed (e.g. an unknown employee code). */
+function retryUnlessClientError(failureCount: number, error: Error): boolean {
+  if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false;
+  return failureCount < 2;
+}
+
+export function useEmployee(code: string) {
+  return useQuery({
+    queryKey: ["employee", code],
+    queryFn: () => apiGet<EmployeeDetail>(`/employees/${encodeURIComponent(code)}`),
+    retry: retryUnlessClientError,
+  });
+}
+
+export function useEmployeeAudit(code: string, options: { enabled: boolean }) {
+  return useQuery({
+    enabled: options.enabled,
+    queryKey: ["employee", code, "audit"],
+    queryFn: () => apiGet<AuditListResponse>(`/employees/${encodeURIComponent(code)}/audit`),
+    retry: retryUnlessClientError,
   });
 }

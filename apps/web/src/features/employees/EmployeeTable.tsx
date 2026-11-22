@@ -1,6 +1,7 @@
 import type { EmployeeListItem, EmployeeListQuery, EmployeeSortField } from "@salary/shared";
-import { Badge, Skeleton, Table, Text, UnstyledButton } from "@mantine/core";
+import { Anchor, Badge, Skeleton, Table, Text, UnstyledButton } from "@mantine/core";
 import type { ReactNode } from "react";
+import { Link, useLocation, useNavigate } from "react-router";
 import { formatMoney } from "../../lib/money";
 
 type Column = {
@@ -99,6 +100,11 @@ function SortableHeader({
 }
 
 export function EmployeeTable({ items, loading, query, onSort }: Props) {
+  const navigate = useNavigate();
+  // Carried to the detail page so its "Back" link restores this filtered, sorted page.
+  const linkState = { listSearch: useLocation().search };
+  const detailPath = (e: EmployeeListItem) => `/employees/${e.employeeCode}`;
+
   const rows = loading
     ? Array.from({ length: 8 }, (_, i) => (
         <Table.Tr key={`skeleton-${i}`}>
@@ -110,10 +116,25 @@ export function EmployeeTable({ items, loading, query, onSort }: Props) {
         </Table.Tr>
       ))
     : (items ?? []).map((employee) => (
-        <Table.Tr key={employee.id}>
+        <Table.Tr
+          key={employee.id}
+          onClick={() => navigate(detailPath(employee), { state: linkState })}
+          style={{ cursor: "pointer" }}
+        >
           {COLUMNS.map((c) => (
             <Table.Td key={c.key} ta={c.numeric ? "right" : undefined}>
-              {c.render(employee)}
+              {c.key === "code" ? (
+                <Anchor
+                  component={Link}
+                  to={detailPath(employee)}
+                  state={linkState}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {employee.employeeCode}
+                </Anchor>
+              ) : (
+                c.render(employee)
+              )}
             </Table.Td>
           ))}
         </Table.Tr>
