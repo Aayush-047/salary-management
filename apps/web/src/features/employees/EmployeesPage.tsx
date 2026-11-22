@@ -1,0 +1,90 @@
+import { Alert, Button, Group, Pagination, Paper, Select, Stack, Text, Title } from "@mantine/core";
+import { useEmployees, useMeta } from "../../api/queries";
+import { EmployeeFilters } from "./EmployeeFilters";
+import { EmployeeTable } from "./EmployeeTable";
+import { hasActiveFilters } from "./url-state";
+import { useEmployeeListQuery } from "./useEmployeeListQuery";
+
+const PAGE_SIZES = ["25", "50", "100"];
+
+export function EmployeesPage() {
+  const { query, update, reset } = useEmployeeListQuery();
+  const meta = useMeta();
+  const employees = useEmployees(query);
+  const data = employees.data;
+  const filtered = hasActiveFilters(query);
+
+  const first = data && data.total > 0 ? (data.page - 1) * data.pageSize + 1 : 0;
+  const last = data ? Math.min(data.page * data.pageSize, data.total) : 0;
+
+  return (
+    <Stack gap="md">
+      <Title order={2}>Employees</Title>
+
+      <EmployeeFilters
+        query={query}
+        meta={meta.data}
+        showClear={filtered}
+        onChange={update}
+        onClear={reset}
+      />
+
+      {employees.isError ? (
+        <Alert color="red" title="Couldn't load employees">
+          <Text size="sm" mb="sm">
+            {employees.error.message}
+          </Text>
+          <Button size="xs" variant="light" color="red" onClick={() => employees.refetch()}>
+            Try again
+          </Button>
+        </Alert>
+      ) : (
+        <Paper withBorder radius="md" style={{ opacity: employees.isPlaceholderData ? 0.6 : 1 }}>
+          <EmployeeTable
+            items={data?.items}
+            loading={employees.isPending}
+            query={query}
+            onSort={(sortBy, sortDir) => update({ sortBy, sortDir })}
+          />
+          {data && data.total === 0 && (
+            <Stack align="center" gap="xs" p="xl">
+              <Text c="dimmed">No employees match these filters.</Text>
+              {filtered && (
+                <Button variant="light" onClick={reset}>
+                  Clear filters
+                </Button>
+              )}
+            </Stack>
+          )}
+        </Paper>
+      )}
+
+      {data && data.total > 0 && (
+        <Group justify="space-between" wrap="wrap">
+          <Text size="sm" c="dimmed" aria-live="polite">
+            Showing {first.toLocaleString()}–{last.toLocaleString()} of{" "}
+            {data.total.toLocaleString()} employees
+          </Text>
+          <Group gap="sm">
+            <Pagination
+              total={data.totalPages}
+              value={data.page}
+              onChange={(page) => update({ page })}
+              siblings={1}
+              size="sm"
+            />
+            <Select
+              aria-label="Rows per page"
+              data={PAGE_SIZES}
+              value={String(query.pageSize)}
+              onChange={(value) => value && update({ pageSize: Number(value) })}
+              allowDeselect={false}
+              w={80}
+              size="xs"
+            />
+          </Group>
+        </Group>
+      )}
+    </Stack>
+  );
+}

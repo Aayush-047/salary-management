@@ -1,6 +1,7 @@
 import { AppShell, Group, NavLink, Title } from "@mantine/core";
 import { Navigate, NavLink as RouterNavLink, Route, Routes } from "react-router";
 import { ApiStatus } from "./components/ApiStatus";
+import { EmployeesPage } from "./features/employees/EmployeesPage";
 import { Placeholder } from "./pages/Placeholder";
 
 const NAV_ITEMS = [
@@ -29,7 +30,8 @@ export function App() {
       <AppShell.Main>
         <Routes>
           <Route path="/" element={<Navigate to="/employees" replace />} />
-          {NAV_ITEMS.map((item) => (
+          <Route path="/employees" element={<EmployeesPage />} />
+          {NAV_ITEMS.filter((item) => item.path !== "/employees").map((item) => (
             <Route key={item.path} path={item.path} element={<Placeholder title={item.label} />} />
           ))}
           <Route path="*" element={<Placeholder title="Page not found" />} />

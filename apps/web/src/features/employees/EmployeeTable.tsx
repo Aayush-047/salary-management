@@ -1,0 +1,141 @@
+import type { EmployeeListItem, EmployeeListQuery, EmployeeSortField } from "@salary/shared";
+import { Badge, Skeleton, Table, Text, UnstyledButton } from "@mantine/core";
+import type { ReactNode } from "react";
+import { formatMoney } from "../../lib/money";
+
+type Column = {
+  key: string;
+  label: string;
+  sortField?: EmployeeSortField;
+  numeric?: boolean;
+  render: (e: EmployeeListItem) => ReactNode;
+};
+
+const COLUMNS: Column[] = [
+  { key: "code", label: "Code", sortField: "employeeCode", render: (e) => e.employeeCode },
+  {
+    key: "name",
+    label: "Name",
+    sortField: "name",
+    render: (e) => (
+      <>
+        <Text size="sm" fw={500}>
+          {e.firstName} {e.lastName}{" "}
+          {e.status === "TERMINATED" && (
+            <Badge size="xs" color="gray" variant="light">
+              Left {e.terminationDate}
+            </Badge>
+          )}
+        </Text>
+        <Text size="xs" c="dimmed">
+          {e.email}
+        </Text>
+      </>
+    ),
+  },
+  { key: "country", label: "Country", render: (e) => e.country.name },
+  {
+    key: "role",
+    label: "Role",
+    render: (e) => (
+      <>
+        <Text size="sm">{e.jobTitle}</Text>
+        <Text size="xs" c="dimmed">
+          {e.department}
+        </Text>
+      </>
+    ),
+  },
+  { key: "level", label: "Level", sortField: "level", render: (e) => `L${e.level}` },
+  {
+    key: "base",
+    label: "Base",
+    sortField: "baseSalary",
+    numeric: true,
+    render: (e) => formatMoney(e.baseSalary, e.currency),
+  },
+  {
+    key: "bonus",
+    label: "Target bonus",
+    numeric: true,
+    render: (e) => formatMoney(e.targetBonus, e.currency),
+  },
+  {
+    key: "total",
+    label: "Total cash",
+    sortField: "totalCash",
+    numeric: true,
+    render: (e) => formatMoney(e.totalCash, e.currency),
+  },
+  { key: "hired", label: "Hired", sortField: "hireDate", render: (e) => e.hireDate },
+];
+
+type Props = {
+  items: EmployeeListItem[] | undefined;
+  loading: boolean;
+  query: EmployeeListQuery;
+  onSort: (sortBy: EmployeeSortField, sortDir: "asc" | "desc") => void;
+};
+
+function SortableHeader({
+  column,
+  query,
+  onSort,
+}: { column: Column } & Pick<Props, "query" | "onSort">) {
+  const field = column.sortField!;
+  const active = query.sortBy === field;
+  const nextDir = active && query.sortDir === "asc" ? "desc" : "asc";
+  return (
+    <UnstyledButton
+      onClick={() => onSort(field, nextDir)}
+      fw={600}
+      fz="sm"
+      aria-label={`Sort by ${column.label} ${nextDir === "asc" ? "ascending" : "descending"}`}
+    >
+      {column.label} {active ? (query.sortDir === "asc" ? "▲" : "▼") : ""}
+    </UnstyledButton>
+  );
+}
+
+export function EmployeeTable({ items, loading, query, onSort }: Props) {
+  const rows = loading
+    ? Array.from({ length: 8 }, (_, i) => (
+        <Table.Tr key={`skeleton-${i}`}>
+          {COLUMNS.map((c) => (
+            <Table.Td key={c.key}>
+              <Skeleton height={14} />
+            </Table.Td>
+          ))}
+        </Table.Tr>
+      ))
+    : (items ?? []).map((employee) => (
+        <Table.Tr key={employee.id}>
+          {COLUMNS.map((c) => (
+            <Table.Td key={c.key} ta={c.numeric ? "right" : undefined}>
+              {c.render(employee)}
+            </Table.Td>
+          ))}
+        </Table.Tr>
+      ));
+
+  return (
+    <Table.ScrollContainer minWidth={1000}>
+      <Table striped highlightOnHover verticalSpacing="xs" aria-label="Employees">
+        <Table.Thead>
+          <Table.Tr>
+            {COLUMNS.map((c) => (
+              <Table.Th key={c.key} ta={c.numeric ? "right" : undefined}>
+                {c.sortField ? (
+                  <SortableHeader column={c} query={query} onSort={onSort} />
+                ) : (
+                  c.label
+                )}
+              </Table.Th>
+            ))}
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>{rows}</Table.Tbody>
+      </Table>
+    </Table.ScrollContainer>
+  );
+}
