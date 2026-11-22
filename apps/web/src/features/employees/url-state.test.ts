@@ -3,6 +3,7 @@ import {
   DEFAULT_QUERY,
   applyChange,
   clearFilters,
+  filterChange,
   hasActiveFilters,
   parseListQuery,
   toSearchParams,
@@ -75,6 +76,23 @@ describe("applyChange", () => {
 
     expect(next).not.toHaveProperty("country");
     expect(next).not.toHaveProperty("search");
+  });
+});
+
+describe("filterChange", () => {
+  it("clears filters the modal no longer includes (e.g. after Reset)", () => {
+    const current = {
+      ...DEFAULT_QUERY,
+      search: "tana",
+      department: ["Engineering"],
+      jobTitle: ["Software Engineer"],
+      level: [4, 5],
+      page: 3,
+    };
+
+    const next = applyChange(current, filterChange({ status: "ACTIVE", country: ["JP"] }));
+
+    expect(next).toEqual({ ...DEFAULT_QUERY, search: "tana", country: ["JP"] });
   });
 });
 

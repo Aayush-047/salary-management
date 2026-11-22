@@ -66,6 +66,23 @@ export function applyChange(
   return next;
 }
 
+/**
+ * Turns the filter modal's values into a change that sets *every* filter explicitly.
+ * A filter missing from the values (e.g. after "Reset") must be cleared, not kept,
+ * because applyChange keeps any key the change doesn't mention.
+ */
+export function filterChange(
+  values: Pick<EmployeeListQuery, "status" | (typeof MULTI_VALUE_KEYS)[number]>,
+): Partial<EmployeeListQuery> {
+  return {
+    status: values.status,
+    country: values.country ?? [],
+    department: values.department ?? [],
+    jobTitle: values.jobTitle ?? [],
+    level: values.level ?? [],
+  };
+}
+
 /** Clears search, filters and status; keeps sorting and page size. */
 export function clearFilters(current: EmployeeListQuery): EmployeeListQuery {
   const next = { ...current, page: 1, status: DEFAULT_QUERY.status };

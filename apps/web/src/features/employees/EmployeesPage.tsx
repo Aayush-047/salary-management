@@ -24,7 +24,7 @@ export function EmployeesPage() {
       <EmployeeFilters
         query={query}
         meta={meta.data}
-        showClear={filtered}
+        fetching={employees.isFetching}
         onChange={update}
         onClear={reset}
       />

@@ -19,7 +19,8 @@ const COLUMNS: Column[] = [
     sortField: "name",
     render: (e) => (
       <>
-        <Text size="sm" fw={500}>
+        {/* A div, not the default <p>: the badge renders a <div>, which a <p> cannot contain. */}
+        <Text component="div" size="sm" fw={500}>
           {e.firstName} {e.lastName}{" "}
           {e.status === "TERMINATED" && (
             <Badge size="xs" color="gray" variant="light">
