@@ -10,7 +10,10 @@ try {
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
-  migrations: { path: "prisma/migrations" },
+  migrations: {
+    path: "prisma/migrations",
+    seed: "tsx --conditions=source prisma/seed/index.ts",
+  },
   // Optional on purpose: `prisma generate` (run on install, in CI and builds) needs no
   // database. Commands that do (`migrate`) fail with a clear error when it is missing.
   datasource: { url: process.env.DATABASE_URL },
