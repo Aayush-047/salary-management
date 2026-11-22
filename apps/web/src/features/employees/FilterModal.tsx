@@ -1,7 +1,7 @@
 import type { EmployeeListQuery, MetaResponse } from "@salary/shared";
 import { Button, Group, Modal, MultiSelect, SegmentedControl, Stack, Text } from "@mantine/core";
 import { useState } from "react";
-import { availableJobTitles } from "./filter-chips";
+import { availableJobTitles } from "./filters";
 import { DEFAULT_QUERY } from "./url-state";
 
 export type FilterValues = Pick<

@@ -26,7 +26,6 @@ export function EmployeesPage() {
         meta={meta.data}
         fetching={employees.isFetching}
         onChange={update}
-        onClear={reset}
       />
 
       {employees.isError ? (
