@@ -120,3 +120,45 @@ Verification and what it caught:
 - Prisma 7 refused `migrate reset` because an AI agent ran it. The AI stopped, explained the
   command, its effect and its target (the local `salary_dev`), and asked. I consented
   explicitly before it ran.
+
+## 6. Employee list
+
+Prompt (summarised): the AI proposed the API contract and UI plan with options (paging style,
+search behaviour, when to add the currency selector, how to sort pay across currencies,
+where table state lives); I chose page numbers, contains-search, USD-equivalent pay sorting and
+URL state.
+
+My UI overrides after reviewing the first version in the browser:
+
+| Area            | AI built / suggested                | Outcome                                                                                                  |
+| --------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Filter layout   | Inline multi-selects in the toolbar | **Overridden:** they grew and shifted the page. I asked for a Filters button opening a modal with Apply. |
+| Search feedback | Debounce only                       | **Extended by me:** a spinner while searching.                                                           |
+| Status switch   | Keep it in the toolbar              | **Overridden:** moved into the modal for a cleaner UI.                                                   |
+| Applied filters | Removable chips under the toolbar   | **Overridden:** chips removed; the badge count is enough, and filters are changed in the modal.          |
+| Seed hire dates | Reduce the share of recent hires    | **Declined by me:** kept as is.                                                                          |
+
+Verification and what it caught:
+
+- **Mutation check:** the AI temporarily broke the USD pay sort (sorting raw local amounts)
+  and confirmed exactly that test failed, proving the test guards the currency bug.
+- **Playwright screenshots** (before committing UI changes) caught two bugs unit tests missed:
+  "Reset" in the modal didn't clear filters on Apply (now a unit-tested pure function), and the
+  terminated badge rendered a `<div>` inside a `<p>` (React console error).
+- **Lint** caught state being synced in an effect (switched to React's recommended pattern)
+  and another invisible character in a test regex.
+- **E2E debugging:** three failures, each diagnosed from Playwright's saved page snapshot
+  rather than by guessing (wrong ARIA role, an open dropdown covering the next field, a
+  non-searchable dropdown that toggles closed). All were test mistakes, not app bugs. The suite
+  then passed three runs in a row before it was committed.
+- **Resolution check:** the web build's use of the shared package's TypeScript source, untested
+  since it was set up, was confirmed when the first web module imported it.
+
+### Incident: a folder moved mid-task
+
+While writing the `/meta` endpoint, `apps/api` was moved into `apps/web/api` between two of the
+AI's file writes (most likely an accidental drag in the editor; no command in the session moves
+folders). The AI noticed because the check output didn't add up (missing API test results, a
+failed request, "file not found" from the leak scan), stopped, located the moved folder,
+explained what happened and asked before moving it back. It then confirmed `git status`
+showed only the intended changes and re-ran every check before committing.

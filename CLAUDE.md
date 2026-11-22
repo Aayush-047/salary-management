@@ -47,10 +47,16 @@ countries. Built step by step in pair-programming style with AI.
   adjustable by HR in the UI.
 - Process: CI via GitHub Actions (no pre-commit hooks); push to a private repo at the end
   (needed before deploy).
-- Browser checks / e2e: Playwright, added with the first real UI page.
+- Employee list: page-number paging with totals; pay sorts compare USD equivalents; list
+  state lives in the URL (shared schema). Filters live only in a modal (Apply / Reset /
+  Cancel); the Filters button shows a count badge; no filter chips.
+- E2E: Playwright on ports 3100/5174 against `salary_e2e`, rebuilt and seeded before each run;
+  `npm run test:e2e`, separate from `npm test`.
+- Check UI changes with Playwright screenshots (scratchpad script) before committing; fix any
+  console errors they reveal.
 - Dependencies resolve to recent majors; verify library APIs in node_modules before use.
 - Run local tools with `npx --no-install` (or npm scripts), never bare `npx`: if a tool is
   missing, bare npx silently downloads whatever version the registry has.
 - Destructive DB commands (`prisma migrate reset`): Prisma blocks AI agents. Explain the
   command, its effect and its target, and ask the user explicitly. Only ever run them
-  against `salary_dev` / `salary_test`.
+  against `salary_dev` / `salary_test` / `salary_e2e`.

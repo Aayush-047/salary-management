@@ -72,7 +72,27 @@ flowchart LR
 | `GET /insights/recent-changes`             | Raises within `from`–`to`                                                               |
 | `GET /meta`                                | Countries, departments, titles, levels, FX rates + as-of date, outlier defaults         |
 
-Errors use one JSON shape: `{error: {code, message, details?}}`.
+Errors use one JSON shape: `{error: {code, message, details?}}`. Invalid input returns
+`400 VALIDATION_ERROR` with one `details` entry per field; malformed JSON returns `400 INVALID_JSON`.
+
+### Employee list (`GET /employees`)
+
+- **Query** (validated with the shared `EmployeeListQuerySchema`, which the web app also uses):
+  `page`, `pageSize` (1–100, default 25), `search`, multi-value `country` / `department` /
+  `jobTitle` / `level` (`?country=DE&country=GB`), `status` (`ACTIVE` default, `TERMINATED`,
+  `ALL`), `sortBy` (`name`, `employeeCode`, `hireDate`, `level`, `baseSalary`, `totalCash`),
+  `sortDir`.
+- **Search** matches anywhere in full name, email or employee code, case-insensitively.
+  LIKE wildcards in the input are escaped, so `100%` matches literally.
+- **Pay sorts use the USD equivalent** (amount × FX rate) while amounts are displayed in local
+  currency; otherwise ¥8,500,000 (≈ $56k) would rank above $140,000. This needs a computed
+  ORDER BY, so the list query is parameterised raw SQL (`Prisma.sql`); sort columns come from a
+  fixed allow-list and every value is a bound parameter.
+- **Paging:** page numbers with a total count (`total`, `totalPages`), because HR expects
+  "page 3 of 378". Offset paging is fine at 10k rows; keyset (cursor) paging is the path if the
+  data grows by orders of magnitude. A tie-break on `id` keeps pages stable.
+- `GET /meta` returns countries, departments with their titles, levels, FX rates with their
+  as-of date and outlier defaults in one call (`Cache-Control: max-age=300`).
 
 ## Analytics
 
@@ -99,11 +119,32 @@ React + Vite + Mantine, with TanStack Query for server state and React Router.
 
 A global **display-currency selector** in the header (state in the URL) controls conversion. Converted figures show "≈" and the FX as-of date.
 
+### Employee list page
+
+- **State lives in the URL** (`/employees?country=DE&level=5&sortBy=totalCash&page=2`), parsed
+  with the same shared schema as the API. Refresh, back/forward and shared links reproduce
+  the view; invalid parameters are dropped instead of breaking the page. Any change other than
+  the page number returns to page 1.
+- **Toolbar is one fixed row:** a search box (300 ms debounce; spinner while waiting and while
+  results load) and a **Filters** button with a badge counting applied values. Filters
+  (status, country, department, job title, level) are edited in a modal as a draft and applied
+  once with **Apply**; **Reset** and **Cancel** live in the modal. Inline multi-selects were
+  tried first and dropped: they grew as values were picked and pushed the page around.
+- The table keeps the previous page visible (dimmed) while the next one loads, and has
+  loading, empty ("Clear filters") and error ("Try again") states.
+
 ## Testing
 
 - **Unit (Vitest, no DB, milliseconds):** FX conversion, compa-ratio classification, CSV row validation, audit diff builder, zod schemas.
 - **Integration (Vitest + Supertest + Postgres in Docker):** analytics SQL, current-comp sync, audit writes, all-or-nothing import. Each test uses a small hand-made dataset so expected numbers are exact, and the DB is reset between tests.
 - **Determinism:** no wall-clock time in logic under test (dates are passed in), and the seed uses a fixed random seed.
+- **End-to-end (Playwright, `npm run test:e2e`):** runs its own API (:3100) and web app (:5174)
+  against a disposable `salary_e2e` database that is rebuilt and seeded with the deterministic
+  dataset before each run, so tests assert exact numbers (e.g. "72 employees match `schmi`").
+  Kept out of `npm test` so the fast suite stays fast.
+- **Safety:** test and e2e setup refuse any database whose name doesn't end in `_test` /
+  `_e2e`, so a misconfigured URL can never truncate dev or production data.
+- **Current size:** 153 unit + integration tests (shared 21, API 111, web 21) and 6 e2e tests.
 
 ## Performance
 
@@ -116,7 +157,9 @@ A global **display-currency selector** in the header (state in the URL) controls
   - `AuditLog(employeeId, createdAt)`
 - Aggregation happens in Postgres. Current comp is stored on `Employee`, so stats never scan history.
 - The seed inserts in batches (`createMany`) in one transaction: 10k employees and 21.7k entries in 2.8 s.
-- Target: list and insight endpoints under 300 ms server-side on 10k employees. To be measured and recorded here once built.
+- Target: list and insight endpoints under 300 ms server-side on 10k employees.
+- **Measured** (local, 10k employees): `GET /employees` 3–20 ms across search, multi-filter,
+  pay sorts and deep pages; `GET /meta` 4 ms. Insight endpoints: to be measured when built.
 
 ## Seed data
 
@@ -140,3 +183,4 @@ A global **display-currency selector** in the header (state in the URL) controls
 | Issue                                                                                                                                                                                                                          | Risk                                                                                                                   | Plan                                                                                                                                                                            |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm audit`: high-severity ReDoS in `effect` ≤ 3.22.0 ([GHSA-7589-6fvf-x4pw](https://github.com/advisories/GHSA-7589-6fvf-x4pw)), pulled in by the Prisma CLI (`prisma` → `@prisma/config` → `effect@3.20.0`, pinned exactly). | Negligible. Dev-time CLI only: it parses our own config file, never user input, and is not part of the runtime client. | Remove when Prisma updates its pin. `npm audit fix --force` would downgrade Prisma to v6, and an npm `overrides` entry did not apply cleanly against the pin (see AI_USAGE.md). |
+| Web production bundle is 624 kB (190 kB gzipped), above Vite's 500 kB warning; most of it is Mantine.                                                                                                                          | Low for an internal tool on office networks.                                                                           | Split routes into lazily loaded chunks in the wrap-up step if time allows.                                                                                                      |
