@@ -1,11 +1,22 @@
-import { EmployeeListQuerySchema } from "@salary/shared";
+import {
+  CreateEmployeeSchema,
+  EmployeeListQuerySchema,
+  TerminateSchema,
+  UpdateEmployeeSchema,
+} from "@salary/shared";
 import { Router } from "express";
 import type { PrismaClient } from "../db/client.js";
+import type { Clock } from "../domain/clock.js";
 import { parseOrThrow } from "../http/errors.js";
 import { getEmployeeAudit, getEmployeeDetail } from "../services/employee-detail-service.js";
 import { listEmployees } from "../services/employee-service.js";
+import {
+  createEmployee,
+  terminateEmployee,
+  updateEmployee,
+} from "../services/employee-write-service.js";
 
-export function employeesRouter(prisma: PrismaClient): Router {
+export function employeesRouter(prisma: PrismaClient, clock: Clock): Router {
   const router = Router();
 
   router.get("/", async (req, res) => {
@@ -13,8 +24,23 @@ export function employeesRouter(prisma: PrismaClient): Router {
     res.json(await listEmployees(prisma, query));
   });
 
+  router.post("/", async (req, res) => {
+    const input = parseOrThrow(CreateEmployeeSchema, req.body);
+    res.status(201).json(await createEmployee(prisma, clock, input));
+  });
+
   router.get("/:code", async (req, res) => {
     res.json(await getEmployeeDetail(prisma, req.params.code));
+  });
+
+  router.patch("/:code", async (req, res) => {
+    const input = parseOrThrow(UpdateEmployeeSchema, req.body);
+    res.json(await updateEmployee(prisma, clock, req.params.code, input));
+  });
+
+  router.post("/:code/terminate", async (req, res) => {
+    const input = parseOrThrow(TerminateSchema, req.body);
+    res.json(await terminateEmployee(prisma, clock, req.params.code, input));
   });
 
   router.get("/:code/audit", async (req, res) => {
