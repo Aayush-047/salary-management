@@ -245,3 +245,35 @@ The AI's own slips, caught and corrected:
   on the blocked list) but didn't stop the commit. The AI flagged it, renamed the variable,
   amended the unpushed commit, verified the whole history is clean, and made the scan gate
   commits from then on.
+
+## 9. CSV import
+
+Prompt (summarised): the AI proposed the file format, how to treat existing people and the
+upload flow, with options. I chose one row per new employee, existing emails rejected, and check
+then import, and **asked for the rules to be shown as instructions on the page**. The AI made
+the instructions, the template and the server's checks come from one shared definition so they
+can't drift apart.
+
+Verification and what it caught:
+
+- **A security advisory that applied to this code:** `csv-parse` 6.x had a prototype-replacement
+  issue in its column mapping, which is exactly how uploaded files would have been parsed. The
+  AI checked the advisory against our use (not just the audit count), confirmed the patched
+  7.0.3 was two months old, upgraded, and also made the parser safe by design: rows as arrays,
+  only known column names as keys, with a test using a hostile `__proto__` header.
+- **A salary a thousand times too small:** the first version read `78.000` as 78. In much of
+  Europe it means 78 thousand, so a German spreadsheet could have imported a salary of €78 that
+  passed validation. The AI found this while re-reading its own test; dotted amounts are now
+  rejected, and the page explains why.
+- **Errors in one pass:** a row with format errors hid its unknown country and title until the
+  next upload. Data checks now run for every well-formed column.
+- **Scale:** a 10,000-row file checks in 164 ms and imports in 5.1 s, with statistics refreshed
+  afterwards (the lesson from step 8).
+
+The AI's own slips, caught and corrected:
+
+- Test data with a stray quotation mark (the CSV was genuinely malformed, so it tested nothing).
+- An expected value that no longer held once the validator reported more problems.
+- An empty-upload test expected a 400, but the app's answer ("The file is empty", in the same
+  report as any other problem) was better; the test was changed, not the app.
+- A file-picker locator that targeted Mantine's visible button instead of the hidden input.

@@ -69,7 +69,8 @@ flowchart LR
 | `POST /employees/:code/terminate`    | Soft-terminate (end date + reason)                                                                                                                      |
 | `PATCH /compensation/:id`            | Correct a pay entry's amounts or date (reason required; allowed for leavers)                                                                            |
 | `GET /audit`                         | Org-wide audit _(planned)_                                                                                                                              |
-| `POST /imports/employees`            | CSV upload. `201 {imported}` or `422 {errors: [{row, field, message}]}`, all-or-nothing                                                                 |
+| `POST /imports/employees/check`      | CSV as the request body (`?filename=`); every problem by row and column + per-country summary; saves nothing                                            |
+| `POST /imports/employees`            | Re-checks, then imports all rows or none: `201 {imported, firstCode, lastCode}` or `422 IMPORT_INVALID` with the report                                 |
 | `GET /insights/pay-stats`            | `groupBy` (country/department/jobTitle/level), `metric` (base/total), `currency` (LOCAL or a code), employee filters; per-group stats + a whole-org row |
 | `GET /insights/outliers`             | `low`, `high`, `minPeers`, `metric`, `direction`, employee filters, paging; flagged employees + summary                                                 |
 | `GET /insights/recent-changes`       | `from`, `to` (default: last 12 months), employee filters; summary, by reason, top 10 raises                                                             |
@@ -162,6 +163,34 @@ loads it, and checks the API: **207 of the 209 planted outliers in judgeable gro
 planted factor combined with the natural ±10% spread landed them at 0.82 and 1.17, inside the
 band, so by the HR rule they are correctly not outliers. The test therefore requires ≥ 95%.
 
+## CSV import
+
+For moving off spreadsheets: one row per **new** employee with their current pay.
+
+- **One definition of the columns** (`IMPORT_COLUMNS` in `packages/shared`: name, example,
+  help text) drives the server's header check, the downloadable template and the instructions on
+  the Import page, so they can't disagree. Columns may come in any order and any letter case.
+- **Check, then import.** Choosing a file runs `check`, which saves nothing and lists every
+  problem with its spreadsheet row number and column (first 200, plus the total). `import`
+  validates again from scratch, because the file or the data may have changed since.
+- **All or nothing**, in one transaction: consecutive employee codes, a HIRE pay entry and a
+  CREATE audit entry ("Imported from staff.csv") per employee, exactly as if added in the app;
+  then `ANALYZE` (see _Performance_).
+- **Same rules as the Add employee form:** rows are validated with the same shared schema, then
+  against the data (country and title exist, hire date not in the future, email not already in
+  the system or repeated in the file). Data checks run for every well-formed column even when
+  other columns in the row are wrong, so a row's problems all show in one pass.
+- **New people only:** existing emails are rejected; existing employees are changed from their
+  own page, where every change is audited. No bulk overwrite of anyone's pay.
+- **Amounts:** `78000` or `78,000`. Any dot is rejected: `78.000` means 78 thousand in much of
+  Europe and 78 elsewhere, and guessing could import a salary a thousand times too small.
+- **Uploaded text is untrusted.** Rows are parsed as plain arrays and only known column names
+  ever become object keys, so a header such as `__proto__` can't reach an object; `csv-parse` is
+  pinned to 7.0.3, which fixes a prototype-replacement advisory in its column mapping
+  (GHSA-8cw4-87c7-c6xx).
+- **Limits:** 10,000 rows and 5 MB (also checked in the browser; the server answers `413` with
+  a plain message). Measured on 10,000 rows (856 KB): check 164 ms, import 5.1 s.
+
 ## Frontend
 
 React + Vite + Mantine, with TanStack Query for server state and React Router.
@@ -251,7 +280,7 @@ too, so it doesn't avoid this.
   the first attempt changed.
 - **Ground truth:** the outlier detector is tested against the seed's planted outliers (see
   _Validating the outlier detector_).
-- **Current size:** 369 unit + integration tests (shared 64, API 229, web 76) and 15 e2e tests.
+- **Current size:** 410 unit + integration tests (shared 66, API 263, web 81) and 17 e2e tests.
 
 ## Performance
 

@@ -77,3 +77,7 @@ countries. Built step by step in pair-programming style with AI.
 - Run `ANALYZE` on tables after any bulk insert (seed, CSV import).
 - The leak scan must gate the commit (abort on a match), never just print; scan history too
   before pushing.
+- CSV import: new employees only (existing emails rejected), all or nothing, check then import
+  (re-checked at import), amounts without dots, columns defined once in shared IMPORT_COLUMNS.
+- Uploaded or user-supplied text: parse into arrays and map only known names to keys; never
+  build objects from untrusted keys. Check advisories against how this code uses a library.
