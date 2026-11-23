@@ -2,7 +2,7 @@ import type { EmployeeListQuery } from "@salary/shared";
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { latestSearchParams } from "../../lib/search-params";
-import { applyChange, clearFilters, parseListQuery, toSearchParams } from "./url-state";
+import { applyChange, clearFilters, parseListQuery, toSearchParams, toggleSort } from "./url-state";
 
 /**
  * The employee list state (filters, sort, page), stored in the URL so that refresh,
@@ -25,9 +25,18 @@ export function useEmployeeListQuery() {
     [setParams],
   );
 
+  /** Header click: toggles from the URL as it is now (see toggleSort). */
+  const sortBy = useCallback(
+    (field: EmployeeListQuery["sortBy"]) => {
+      const latest = parseListQuery(latestSearchParams());
+      setParams(toSearchParams(applyChange(latest, toggleSort(latest, field))));
+    },
+    [setParams],
+  );
+
   const reset = useCallback(() => {
     setParams(toSearchParams(clearFilters(parseListQuery(latestSearchParams()))));
   }, [setParams]);
 
-  return { query, update, reset };
+  return { query, update, reset, sortBy };
 }

@@ -89,7 +89,8 @@ type Props = {
   items: EmployeeListItem[] | undefined;
   loading: boolean;
   query: EmployeeListQuery;
-  onSort: (sortBy: EmployeeSortField, sortDir: "asc" | "desc") => void;
+  /** Toggles sorting by this field (the direction is decided from the current URL). */
+  onSort: (sortBy: EmployeeSortField) => void;
 };
 
 function SortableHeader({
@@ -102,7 +103,7 @@ function SortableHeader({
   const nextDir = active && query.sortDir === "asc" ? "desc" : "asc";
   return (
     <UnstyledButton
-      onClick={() => onSort(field, nextDir)}
+      onClick={() => onSort(field)}
       fw={600}
       fz="sm"
       aria-label={`Sort by ${column.label} ${nextDir === "asc" ? "ascending" : "descending"}`}

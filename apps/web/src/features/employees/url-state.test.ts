@@ -7,6 +7,7 @@ import {
   hasActiveFilters,
   parseListQuery,
   toSearchParams,
+  toggleSort,
 } from "./url-state";
 
 const parse = (search: string) => parseListQuery(new URLSearchParams(search));
@@ -112,5 +113,19 @@ describe("clearFilters / hasActiveFilters", () => {
     expect(cleared).toEqual({ ...DEFAULT_QUERY, sortBy: "hireDate", pageSize: 50 });
     expect(hasActiveFilters(query)).toBe(true);
     expect(hasActiveFilters(cleared)).toBe(false);
+  });
+});
+
+describe("toggleSort", () => {
+  it("sorts a new column ascending", () => {
+    expect(toggleSort({ sortBy: "name", sortDir: "asc" }, "totalCash")).toEqual({
+      sortBy: "totalCash",
+      sortDir: "asc",
+    });
+  });
+
+  it("flips the direction of the current column", () => {
+    expect(toggleSort({ sortBy: "totalCash", sortDir: "asc" }, "totalCash").sortDir).toBe("desc");
+    expect(toggleSort({ sortBy: "totalCash", sortDir: "desc" }, "totalCash").sortDir).toBe("asc");
   });
 });

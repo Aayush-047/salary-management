@@ -11,7 +11,7 @@ import { useEmployeeListQuery } from "./useEmployeeListQuery";
 const PAGE_SIZES = ["25", "50", "100"];
 
 export function EmployeesPage() {
-  const { query, update, reset } = useEmployeeListQuery();
+  const { query, update, reset, sortBy } = useEmployeeListQuery();
   const [adding, setAdding] = useState(false);
   const meta = useMeta();
   const employees = useEmployees(query);
@@ -52,7 +52,7 @@ export function EmployeesPage() {
             items={data?.items}
             loading={employees.isPending}
             query={query}
-            onSort={(sortBy, sortDir) => update({ sortBy, sortDir })}
+            onSort={sortBy}
           />
           {data && data.total === 0 && (
             <Stack align="center" gap="xs" p="xl">

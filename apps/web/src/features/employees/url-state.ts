@@ -81,3 +81,16 @@ export function hasActiveFilters(query: EmployeeListQuery): boolean {
     MULTI_VALUE_KEYS.some((key) => (query[key]?.length ?? 0) > 0)
   );
 }
+
+/**
+ * Clicking a column header: a new column sorts ascending, the same column flips direction.
+ * Computed from the current state at click time, so a quick double click can't read a stale
+ * direction and sort the same way twice.
+ */
+export function toggleSort(
+  current: Pick<EmployeeListQuery, "sortBy" | "sortDir">,
+  field: EmployeeListQuery["sortBy"],
+): Pick<EmployeeListQuery, "sortBy" | "sortDir"> {
+  const flip = current.sortBy === field && current.sortDir === "asc";
+  return { sortBy: field, sortDir: flip ? "desc" : "asc" };
+}
