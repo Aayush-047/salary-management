@@ -44,7 +44,12 @@ function orderBy(sortBy: EmployeeSortField, sortDir: "asc" | "desc"): Prisma.Sql
   return Prisma.sql`${sorts[sortBy]}, e.id ASC`;
 }
 
-function whereClause(query: EmployeeListQuery): Prisma.Sql {
+/** WHERE clause for the shared employee filters (plus search on the list). Used by insights too. */
+export function whereClause(
+  query: Pick<EmployeeListQuery, "status" | "country" | "department" | "jobTitle" | "level"> & {
+    search?: string | undefined;
+  },
+): Prisma.Sql {
   const conditions: Prisma.Sql[] = [];
   if (query.status !== "ALL") {
     conditions.push(Prisma.sql`e.status = ${query.status}::"EmployeeStatus"`);
@@ -67,7 +72,8 @@ function whereClause(query: EmployeeListQuery): Prisma.Sql {
     : Prisma.empty;
 }
 
-const FROM = Prisma.sql`
+/** Employees joined with country, FX rate, job title and department (aliases e, c, f, j, d). */
+export const FROM = Prisma.sql`
   FROM "Employee" e
   JOIN "Country" c ON c.code = e."countryCode"
   JOIN "FxRate" f ON f.currency = e."currentCurrency"
