@@ -28,7 +28,7 @@ export function createApp({ corsOrigin, prisma, clock = systemClock }: AppDepend
   app.use("/employees", employeesRouter(prisma, clock));
   app.use("/compensation", compensationRouter(prisma, clock));
   app.use("/meta", metaRouter(prisma));
-  app.use("/insights", insightsRouter(prisma));
+  app.use("/insights", insightsRouter(prisma, clock));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

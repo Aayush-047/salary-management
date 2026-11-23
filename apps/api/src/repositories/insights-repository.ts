@@ -1,4 +1,10 @@
-import type { OutlierQuery, PayMetric, PayStatsGroup, PayStatsQuery } from "@salary/shared";
+import type {
+  OutlierQuery,
+  PayMetric,
+  PayStatsGroup,
+  PayStatsQuery,
+  RecentChangesQuery,
+} from "@salary/shared";
 import type { PrismaClient } from "../db/client.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { FROM, whereClause } from "./employee-repository.js";
@@ -172,4 +178,84 @@ export async function findOutlierSummary(
       (SELECT COUNT(*) FROM scored WHERE "peerCount" >= ${query.minPeers} AND ratio < ${query.low}::float8)::int AS underpaid,
       (SELECT COUNT(*) FROM scored WHERE "peerCount" >= ${query.minPeers} AND ratio > ${query.high}::float8)::int AS overpaid`;
   return summary!;
+}
+
+/**
+ * Pay changes in a period with the raise versus the same employee's previous entry. LAG runs
+ * over each employee's full history first, so the previous entry may predate the period.
+ * Hires (not a raise) and changes across currencies (relocations) are excluded.
+ */
+function raisesInPeriod(
+  query: RecentChangesQuery,
+  period: { from: string; to: string },
+): Prisma.Sql {
+  return Prisma.sql`
+    WITH history AS (
+      SELECT c."employeeId", c."effectiveDate", c.reason, c."baseSalary", c.currency,
+             LAG(c."baseSalary") OVER w AS "previousBase",
+             LAG(c.currency) OVER w AS "previousCurrency"
+      FROM "CompensationEntry" c
+      WINDOW w AS (PARTITION BY c."employeeId" ORDER BY c."effectiveDate")
+    ),
+    people AS (
+      SELECT e.id, e."employeeCode", e."firstName", e."lastName"
+      ${FROM}
+      ${whereClause(query)}
+    ),
+    raises AS (
+      SELECT p."employeeCode", p."firstName", p."lastName", h."employeeId",
+             h."effectiveDate", h.reason::text AS reason, h."previousBase", h."baseSalary" AS "newBase",
+             h.currency, (h."baseSalary" - h."previousBase")::float8 / h."previousBase" AS "raisePct"
+      FROM history h JOIN people p ON p.id = h."employeeId"
+      WHERE h."effectiveDate" BETWEEN ${period.from}::date AND ${period.to}::date
+        AND h.reason NOT IN ('HIRE', 'RELOCATION')
+        AND h."previousBase" IS NOT NULL
+        AND h."previousCurrency" = h.currency
+    )`;
+}
+
+export type RaiseSummaryRow = {
+  changes: number;
+  employees: number;
+  averageRaisePct: number | null;
+  medianRaisePct: number | null;
+};
+export type RaiseByReasonRow = { reason: string; changes: number; averageRaisePct: number };
+export type RaiseRow = {
+  employeeCode: string;
+  firstName: string;
+  lastName: string;
+  effectiveDate: Date;
+  reason: string;
+  previousBase: number;
+  newBase: number;
+  currency: string;
+  raisePct: number;
+};
+
+export async function findRecentChanges(
+  prisma: PrismaClient,
+  query: RecentChangesQuery,
+  period: { from: string; to: string },
+  topLimit: number,
+) {
+  const raises = raisesInPeriod(query, period);
+  const [summary, byReason, top] = await Promise.all([
+    prisma.$queryRaw<RaiseSummaryRow[]>`
+      ${raises}
+      SELECT COUNT(*)::int AS changes, COUNT(DISTINCT "employeeId")::int AS employees,
+             AVG("raisePct")::float8 AS "averageRaisePct",
+             (percentile_cont(0.5) WITHIN GROUP (ORDER BY "raisePct"))::float8 AS "medianRaisePct"
+      FROM raises`,
+    prisma.$queryRaw<RaiseByReasonRow[]>`
+      ${raises}
+      SELECT reason, COUNT(*)::int AS changes, AVG("raisePct")::float8 AS "averageRaisePct"
+      FROM raises GROUP BY reason ORDER BY changes DESC, reason`,
+    prisma.$queryRaw<RaiseRow[]>`
+      ${raises}
+      SELECT "employeeCode", "firstName", "lastName", "effectiveDate", reason,
+             "previousBase", "newBase", currency, "raisePct"
+      FROM raises ORDER BY "raisePct" DESC, "employeeCode" LIMIT ${topLimit}`,
+  ]);
+  return { summary: summary[0]!, byReason, top };
 }

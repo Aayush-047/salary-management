@@ -1,5 +1,8 @@
 import {
   LOCAL_CURRENCY,
+  type CompensationReason,
+  type RecentChangesQuery,
+  type RecentChangesResponse,
   type OutlierQuery,
   type OutlierResponse,
   type PayStatsQuery,
@@ -7,12 +10,13 @@ import {
   type PayStatsRow,
 } from "@salary/shared";
 import type { PrismaClient } from "../db/client.js";
-import { toIsoDate } from "../domain/clock.js";
+import { lastTwelveMonths, latestAllowedDate, toIsoDate, type Clock } from "../domain/clock.js";
 import { invalid } from "../domain/errors.js";
 import {
   findOutlierSummary,
   findOutliers,
   findPayStats,
+  findRecentChanges,
   type PayStatsRowRaw,
 } from "../repositories/insights-repository.js";
 
@@ -103,5 +107,49 @@ export async function getOutliers(
     total,
     totalPages: Math.ceil(total / query.pageSize),
     summary,
+  };
+}
+
+const TOP_RAISES = 10;
+
+/** Fractions like 0.0566 (5.66%), to four decimals as elsewhere in the API. */
+function roundPct(value: number): number {
+  return Math.round(value * 10_000) / 10_000;
+}
+
+/** Raises in a period (default: the last 12 months up to today). */
+export async function getRecentChanges(
+  prisma: PrismaClient,
+  clock: Clock,
+  query: RecentChangesQuery,
+): Promise<RecentChangesResponse> {
+  const defaults = lastTwelveMonths(latestAllowedDate(clock));
+  const period = { from: query.from ?? defaults.from, to: query.to ?? defaults.to };
+  const { summary, byReason, top } = await findRecentChanges(prisma, query, period, TOP_RAISES);
+
+  return {
+    ...period,
+    summary: {
+      changes: summary.changes,
+      employees: summary.employees,
+      averageRaisePct: summary.averageRaisePct === null ? null : roundPct(summary.averageRaisePct),
+      medianRaisePct: summary.medianRaisePct === null ? null : roundPct(summary.medianRaisePct),
+    },
+    byReason: byReason.map((row) => ({
+      reason: row.reason as CompensationReason,
+      changes: row.changes,
+      averageRaisePct: roundPct(row.averageRaisePct),
+    })),
+    topRaises: top.map((row) => ({
+      employeeCode: row.employeeCode,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      effectiveDate: toIsoDate(row.effectiveDate),
+      reason: row.reason as CompensationReason,
+      previousBase: row.previousBase,
+      newBase: row.newBase,
+      currency: row.currency,
+      raisePct: roundPct(row.raisePct),
+    })),
   };
 }

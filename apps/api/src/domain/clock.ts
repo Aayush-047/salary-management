@@ -24,3 +24,15 @@ export function toIsoDate(date: Date): string {
 export function fromIsoDate(iso: string): Date {
   return new Date(`${iso}T00:00:00Z`);
 }
+
+/**
+ * The 12 months ending on `to` (inclusive): from the day after the same date a year earlier.
+ * A leap day maps to the 1st of March, since the previous year has no 29 February.
+ */
+export function lastTwelveMonths(to: string): { from: string; to: string } {
+  const [year, month, day] = to.split("-").map(Number) as [number, number, number];
+  const yearAgo = new Date(Date.UTC(year - 1, month - 1, day));
+  if (yearAgo.getUTCMonth() !== month - 1) yearAgo.setUTCDate(0); // 29 Feb → 28 Feb
+  yearAgo.setUTCDate(yearAgo.getUTCDate() + 1);
+  return { from: toIsoDate(yearAgo), to };
+}
