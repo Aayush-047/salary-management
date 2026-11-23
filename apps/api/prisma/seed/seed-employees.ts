@@ -1,10 +1,9 @@
 import type { PrismaClient } from "../../src/db/client.js";
 import type { GeneratedEmployee } from "./generate-employees.js";
+import { SEED_TRANSACTION_OPTIONS } from "./transaction-options.js";
 
 const EMPLOYEE_BATCH_SIZE = 1_000;
 const ENTRY_BATCH_SIZE = 5_000;
-/** Inserting ~30k rows takes a few seconds; Prisma's default interactive transaction timeout is 5s. */
-const TRANSACTION_TIMEOUT_MS = 120_000;
 
 function chunks<T>(items: readonly T[], size: number): T[][] {
   const result: T[][] = [];
@@ -37,43 +36,40 @@ export async function seedEmployees(
     return id;
   };
 
-  const result = await prisma.$transaction(
-    async (tx) => {
-      for (const batch of chunks(employees, EMPLOYEE_BATCH_SIZE)) {
-        await tx.employee.createMany({
-          data: batch.map((e) => ({
-            employeeCode: e.employeeCode,
-            firstName: e.firstName,
-            lastName: e.lastName,
-            email: e.email,
-            countryCode: e.countryCode,
-            jobTitleId: titleIdFor(e.jobTitle),
-            level: e.level,
-            hireDate: e.hireDate,
-            status: e.status,
-            terminationDate: e.terminationDate,
-            currentBaseSalary: e.currentBaseSalary,
-            currentTargetBonus: e.currentTargetBonus,
-            currentCurrency: e.currentCurrency,
-          })),
-        });
-      }
-
-      const inserted = await tx.employee.findMany({ select: { id: true, employeeCode: true } });
-      const idByCode = new Map(inserted.map((e) => [e.employeeCode, e.id]));
-
-      const entries = employees.flatMap((e) => {
-        const employeeId = idByCode.get(e.employeeCode)!;
-        return e.entries.map((entry) => ({ employeeId, ...entry }));
+  const result = await prisma.$transaction(async (tx) => {
+    for (const batch of chunks(employees, EMPLOYEE_BATCH_SIZE)) {
+      await tx.employee.createMany({
+        data: batch.map((e) => ({
+          employeeCode: e.employeeCode,
+          firstName: e.firstName,
+          lastName: e.lastName,
+          email: e.email,
+          countryCode: e.countryCode,
+          jobTitleId: titleIdFor(e.jobTitle),
+          level: e.level,
+          hireDate: e.hireDate,
+          status: e.status,
+          terminationDate: e.terminationDate,
+          currentBaseSalary: e.currentBaseSalary,
+          currentTargetBonus: e.currentTargetBonus,
+          currentCurrency: e.currentCurrency,
+        })),
       });
-      for (const batch of chunks(entries, ENTRY_BATCH_SIZE)) {
-        await tx.compensationEntry.createMany({ data: batch });
-      }
+    }
 
-      return { employees: inserted.length, compensationEntries: entries.length };
-    },
-    { timeout: TRANSACTION_TIMEOUT_MS },
-  );
+    const inserted = await tx.employee.findMany({ select: { id: true, employeeCode: true } });
+    const idByCode = new Map(inserted.map((e) => [e.employeeCode, e.id]));
+
+    const entries = employees.flatMap((e) => {
+      const employeeId = idByCode.get(e.employeeCode)!;
+      return e.entries.map((entry) => ({ employeeId, ...entry }));
+    });
+    for (const batch of chunks(entries, ENTRY_BATCH_SIZE)) {
+      await tx.compensationEntry.createMany({ data: batch });
+    }
+
+    return { employees: inserted.length, compensationEntries: entries.length };
+  }, SEED_TRANSACTION_OPTIONS);
 
   // Refresh planner statistics: right after a bulk load Postgres still thinks the tables are
   // nearly empty and can pick very slow plans (the outlier query took 14 s instead of 40 ms).

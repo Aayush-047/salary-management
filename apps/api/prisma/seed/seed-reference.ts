@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../src/db/client.js";
+import { SEED_TRANSACTION_OPTIONS } from "./transaction-options.js";
 import { COUNTRIES, DEMO_USER_NAME, DEPARTMENTS, FX_AS_OF, FX_RATES } from "./reference-data.js";
 
 export type ReferenceCounts = {
@@ -60,5 +61,5 @@ export async function seedReference(prisma: PrismaClient): Promise<ReferenceCoun
       jobTitles: await tx.jobTitle.count(),
       users: await tx.user.count(),
     };
-  });
+  }, SEED_TRANSACTION_OPTIONS);
 }
