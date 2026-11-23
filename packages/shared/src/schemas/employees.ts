@@ -21,15 +21,11 @@ export type EmployeeSortField = (typeof EMPLOYEE_SORT_FIELDS)[number];
 
 export const EMPLOYEE_STATUS_FILTERS = ["ACTIVE", "TERMINATED", "ALL"] as const;
 
-export const EmployeeListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(25),
-  search: z
-    .string()
-    .trim()
-    .max(100)
-    .optional()
-    .transform((s) => (s ? s : undefined)),
+/**
+ * Filters shared by the employee list and every insight: who is included.
+ * Spread into each query schema so all endpoints filter the same way.
+ */
+export const EmployeeFilterFields = {
   country: multiValue(z.string().trim().toUpperCase().length(2)),
   department: multiValue(z.string().trim().min(1).max(100)),
   jobTitle: multiValue(z.string().trim().min(1).max(100)),
@@ -42,6 +38,18 @@ export const EmployeeListQuerySchema = z.object({
   ),
   /** Leavers are excluded unless asked for. */
   status: z.enum(EMPLOYEE_STATUS_FILTERS).default("ACTIVE"),
+};
+
+export const EmployeeListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  search: z
+    .string()
+    .trim()
+    .max(100)
+    .optional()
+    .transform((s) => (s ? s : undefined)),
+  ...EmployeeFilterFields,
   /** Pay sorts compare USD-equivalent values, so different currencies rank correctly. */
   sortBy: z.enum(EMPLOYEE_SORT_FIELDS).default("name"),
   sortDir: z.enum(["asc", "desc"]).default("asc"),
