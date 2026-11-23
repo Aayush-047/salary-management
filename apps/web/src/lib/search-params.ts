@@ -45,3 +45,13 @@ export function appendParam(
   if (value === undefined) return;
   for (const item of Array.isArray(value) ? value : [value]) params.append(key, String(item));
 }
+
+/**
+ * The URL's parameters right now. Use this, not the values from the last render, when building
+ * the next URL: two quick changes (e.g. "From" then "To") would otherwise each start from the
+ * same stale parameters and the second would drop the first. react-router's functional
+ * setSearchParams also hands over the render-time values, so it doesn't avoid this.
+ */
+export function latestSearchParams(): URLSearchParams {
+  return new URLSearchParams(window.location.search);
+}

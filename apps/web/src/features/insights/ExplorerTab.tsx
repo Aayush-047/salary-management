@@ -24,6 +24,7 @@ import { useSearchParams } from "react-router";
 import { useMeta, usePayStats } from "../../api/queries";
 import { useDisplayCurrency } from "../../components/display-currency-context";
 import { formatMoney, formatMoneyCompact } from "../../lib/money";
+import { latestSearchParams } from "../../lib/search-params";
 import { FilterModal, type FilterValues } from "../employees/FilterModal";
 import { activeFilterCount } from "../employees/filters";
 import { filterChange } from "../employees/url-state";
@@ -110,8 +111,10 @@ export function ExplorerTab() {
   const table = usePayStats({ ...state, currency });
   const chart = usePayStats({ ...state, currency: chartCurrency });
 
-  const update = (change: Partial<ExplorerState>) =>
-    setParams(explorerParams({ ...state, ...change }, params));
+  const update = (change: Partial<ExplorerState>) => {
+    const latest = latestSearchParams();
+    setParams(explorerParams({ ...parseExplorer(latest), ...change }, latest));
+  };
   const applyFilters = (values: FilterValues) => {
     update(filterChange(values));
     filters.close();
