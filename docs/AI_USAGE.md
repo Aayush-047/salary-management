@@ -202,3 +202,46 @@ The AI's own slips, caught and corrected:
 - Two `grep` checks misreported (regex characters in the pattern); verified the files directly.
 - A screenshot script read the previous step's notification; rewritten to wait for each step's
   own message.
+
+## 8. Insights
+
+Prompt (summarised): the AI proposed the three insights, their currency rules and the page
+layout with options; it loaded data-visualisation guidance before designing the chart.
+
+| Decision             | AI suggested                                               | Outcome                                                                  |
+| -------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Layout               | One page with tabs                                         | Accepted                                                                 |
+| Pay explorer         | Stats table + bar chart of the median                      | Accepted                                                                 |
+| Currency selector    | Global (list, detail, insights)                            | Accepted                                                                 |
+| Recent changes       | Last 12 months; exclude hires and relocations from raise % | Accepted                                                                 |
+| Currency persistence | Remembered in the browser instead of the URL               | Proposed by the AI (changing the earlier design), stated before building |
+
+Verification and what it caught:
+
+- **Ground truth for the depth feature:** the seed plants outliers and returns their codes; a
+  test checks the detector finds them. Measured 207/209 with 0 false alarms; the AI traced the
+  two misses (0.82 and 1.17, inside the band) rather than accepting 99% unexplained.
+- **A 14-second query:** that test timed out because Postgres had stale statistics right after
+  the bulk load (14 s vs 40 ms after `ANALYZE`). Fixed in the seed, with a test that fails
+  without it; noted for CSV import.
+- **Wrong numbers from a stale URL:** setting From then To dropped From, so the page showed 869
+  changes for the wrong period instead of 600. Traced to building the next URL from render-time
+  values; react-router's source showed its functional setter has the same issue. Fixed in every
+  page, with an e2e regression test.
+- **The same bug in sorting:** a quick double click sorted ascending twice; found when the e2e run
+  slowed down and an existing test failed.
+- **Mixed-currency ranking:** the details table ranked ¥7.6M above €69k; it now follows the
+  chart's single-currency order (unit-tested).
+- **Chart readability** from screenshots: gridlines ran through the bars instead of marking
+  values.
+
+The AI's own slips, caught and corrected:
+
+- A hand-calculated expected value in a test was wrong (165,517 instead of 142,241); the test
+  failed and the test was corrected, not the code.
+- Several test locators were wrong (hidden radio inputs, a label shared by a tile and a
+  control, reading loading placeholders); each diagnosed from the error or page snapshot.
+- **Committed despite a leak-scan hit:** the scan printed a match (a variable named with a word
+  on the blocked list) but didn't stop the commit. The AI flagged it, renamed the variable,
+  amended the unpushed commit, verified the whole history is clean, and made the scan gate
+  commits from then on.

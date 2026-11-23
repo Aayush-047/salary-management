@@ -57,23 +57,23 @@ flowchart LR
 
 ## API
 
-| Method & path                        | Purpose                                                                                 |
-| ------------------------------------ | --------------------------------------------------------------------------------------- |
-| `GET /employees`                     | Search, filters (country, dept, title, level, status), sort, pagination                 |
-| `GET /employees/:code`               | Profile, current pay and pay timeline (newest first, % change per entry)                |
-| `GET /employees/:code/audit`         | That employee's change history (who, when, field changes, reason)                       |
-| `POST /employees`                    | Create, with starting pay as the HIRE entry; next code generated                        |
-| `PATCH /employees/:code`             | Edit name, email, title, level, hire date (reason required)                             |
-| `POST /employees/:code/compensation` | New pay entry; a promotion may also change level/title in the same event                |
-| `POST /employees/:code/relocate`     | New country and pay in its currency, as one event                                       |
-| `POST /employees/:code/terminate`    | Soft-terminate (end date + reason)                                                      |
-| `PATCH /compensation/:id`            | Correct a pay entry's amounts or date (reason required; allowed for leavers)            |
-| `GET /audit`                         | Org-wide audit _(planned)_                                                              |
-| `POST /imports/employees`            | CSV upload. `201 {imported}` or `422 {errors: [{row, field, message}]}`, all-or-nothing |
-| `GET /insights/pay-stats`            | `groupBy`, `metric=base\|total`, `currency`, filters                                    |
-| `GET /insights/outliers`             | `low`, `high`, `minPeers`, `metric`, filters                                            |
-| `GET /insights/recent-changes`       | Raises within `from`–`to`                                                               |
-| `GET /meta`                          | Countries, departments, titles, levels, FX rates + as-of date, outlier defaults         |
+| Method & path                        | Purpose                                                                                                                                                 |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /employees`                     | Search, filters (country, dept, title, level, status), sort, pagination                                                                                 |
+| `GET /employees/:code`               | Profile, current pay and pay timeline (newest first, % change per entry)                                                                                |
+| `GET /employees/:code/audit`         | That employee's change history (who, when, field changes, reason)                                                                                       |
+| `POST /employees`                    | Create, with starting pay as the HIRE entry; next code generated                                                                                        |
+| `PATCH /employees/:code`             | Edit name, email, title, level, hire date (reason required)                                                                                             |
+| `POST /employees/:code/compensation` | New pay entry; a promotion may also change level/title in the same event                                                                                |
+| `POST /employees/:code/relocate`     | New country and pay in its currency, as one event                                                                                                       |
+| `POST /employees/:code/terminate`    | Soft-terminate (end date + reason)                                                                                                                      |
+| `PATCH /compensation/:id`            | Correct a pay entry's amounts or date (reason required; allowed for leavers)                                                                            |
+| `GET /audit`                         | Org-wide audit _(planned)_                                                                                                                              |
+| `POST /imports/employees`            | CSV upload. `201 {imported}` or `422 {errors: [{row, field, message}]}`, all-or-nothing                                                                 |
+| `GET /insights/pay-stats`            | `groupBy` (country/department/jobTitle/level), `metric` (base/total), `currency` (LOCAL or a code), employee filters; per-group stats + a whole-org row |
+| `GET /insights/outliers`             | `low`, `high`, `minPeers`, `metric`, `direction`, employee filters, paging; flagged employees + summary                                                 |
+| `GET /insights/recent-changes`       | `from`, `to` (default: last 12 months), employee filters; summary, by reason, top 10 raises                                                             |
+| `GET /meta`                          | Countries, departments, titles, levels, FX rates + as-of date, outlier defaults                                                                         |
 
 Errors use one JSON shape: `{error: {code, message, details?}}`. Invalid input returns
 `400 VALIDATION_ERROR` with one `details` entry per field; malformed JSON returns `400 INVALID_JSON`.
@@ -128,14 +128,39 @@ Errors use one JSON shape: `{error: {code, message, details?}}`. Invalid input r
 
 ## Analytics
 
-- **Pay stats:** count, min, max, avg and sum via SQL `GROUP BY`; median via `percentile_cont(0.5)`. Everything runs in Postgres, and only aggregated rows are returned. Terminated employees are excluded by default.
+Every insight uses the employee list's own filter SQL (`whereClause`), so a filter includes
+exactly the same people everywhere. Leavers are excluded by default.
+
+- **Pay stats:** headcount, min, max, average and total via SQL `GROUP BY`; median via
+  `percentile_cont(0.5)`. Only aggregated rows leave the database.
+  - **Currency:** with "Local", a breakdown _by country_ keeps each country's own currency
+    (exact, no conversion). Anything that mixes countries (other groupings, the whole-org row)
+    is converted in SQL as `amount × own rate ÷ target rate`, into USD or the chosen currency.
 - **Peer outliers:**
-  - Peers share **job title + level + country**.
+  - Peers share **job title + level + country**, so a group is always one currency and the
+    ratio needs no conversion.
   - **Peer compa-ratio = pay ÷ peer-group median**, using base or total cash as selected.
-  - Defaults are a band of **0.80–1.20** and a **minimum group of 5**, defined once in `packages/shared`. HR can adjust both in the UI (range slider), and the API validates `0 < low < 1 < high`.
-  - Results show the person, their pay, peer median, compa-ratio and group size, sorted by distance from 1.00. Groups below the minimum are reported as "not enough peers", not flagged.
-  - The median is used rather than the mean so one extreme salary doesn't skew the comparison. A fixed band is used rather than percentiles because percentiles always flag someone, even when pay is fair.
-- **Recent changes:** consecutive entries per employee are compared with `LAG()` to compute the raise %, filtered by effective date.
+  - Defaults are a band of **0.80–1.20** and a **minimum group of 5**, defined once in
+    `packages/shared`. HR can adjust both in the UI, and the API validates `0 < low < 1 < high`.
+  - Ordered by distance from 1.00, paged. The summary reports how many groups and employees
+    could be judged and how many could not (groups below the minimum are never flagged: with two
+    people, one always looks "off").
+  - The median is used rather than the mean so one extreme salary doesn't skew the comparison.
+    A fixed band is used rather than percentiles because percentiles always flag someone, even
+    when pay is fair.
+- **Recent changes:** `LAG()` over each employee's **full** history (so the previous entry may
+  predate the period), then filtered to the period. Hires (not a raise) and currency changes
+  (relocations: no meaningful %) are excluded. Default period: the 12 months ending today
+  (UTC+14 rule), computed by a unit-tested helper that handles leap days.
+
+### Validating the outlier detector
+
+The seed deliberately pays ~2% of active employees far from their peers and returns their
+codes, which gives the detector a known answer. A test regenerates the 10,000-employee seed,
+loads it, and checks the API: **207 of the 209 planted outliers in judgeable groups are found
+(99%), with 0 false alarms** among normally paid employees. The two misses were traced: the
+planted factor combined with the natural ±10% spread landed them at 0.82 and 1.17, inside the
+band, so by the HR rule they are correctly not outliers. The test therefore requires ≥ 95%.
 
 ## Frontend
 
@@ -149,7 +174,36 @@ React + Vite + Mantine, with TanStack Query for server state and React Router.
 | **Import**          | CSV upload with a row-level error table                     |
 | **Audit log**       | Org-wide audit                                              |
 
-A global **display-currency selector** in the header (state in the URL) controls conversion. Converted figures show "≈" and the FX as-of date.
+A global **display-currency selector** in the header ("Local currency" or any currency in the FX
+table) controls conversion. It is **remembered in the browser** rather than carried in every URL
+(a change from the original plan: a query parameter would have to follow every link and tab;
+the trade-off is that a shared link opens in the viewer's own currency). Converted figures show
+"≈" with the original on hover or underneath. The pay timeline and all forms always stay in the
+record's own currency: those are the contract figures, never edited as converted values.
+
+**URL state:** every page builds the next URL from the URL as it is _now_
+(`latestSearchParams()`), not from the last render. Two quick changes (setting From then To, a
+double click on a sort header) otherwise each started from the same stale parameters and the
+second dropped the first. react-router's functional `setSearchParams` passes render-time values
+too, so it doesn't avoid this.
+
+### Insights page
+
+- Tabs (Pay explorer · Outliers · Recent changes); tab, settings and filters live in the URL,
+  and filters carry over between tabs. The filter modal is the employee list's.
+- **Pay explorer:** KPI tiles for the whole organisation; a chart of the median per group; the
+  stats table as the table view. Chart choices follow the data-visualisation guidance: ranked
+  horizontal bars (largest first; levels keep L1–L6 order), one hue and no legend for a single
+  series, names on the axis (long titles never squeezed into short bars), vertical value
+  gridlines, hover for range and headcount, and no one-bar chart (a message instead). The chart
+  is always in one currency (USD when "Local" is selected); the table may keep each country's
+  currency and follows the chart's order rather than ranking mixed currencies by raw numbers.
+- **Outliers:** band slider (applied on release), smallest peer group, measure, direction;
+  tiles for below/above peers and how many employees were compared; each row shows pay, peer
+  median, compa-ratio and an "above/below peers" label (never colour alone).
+- **Recent changes:** period, summary tiles, breakdown by reason, largest raises.
+- Opening an employee from any of these shows "Back to outliers" (etc.) and returns to the same
+  view.
 
 ### Employee list page
 
@@ -191,10 +245,13 @@ A global **display-currency selector** in the header (state in the URL) controls
   Kept out of `npm test` so the fast suite stays fast.
 - **Safety:** test and e2e setup refuse any database whose name doesn't end in `_test` /
   `_e2e`, so a misconfigured URL can never truncate dev or production data.
-- **Two Playwright projects:** `read-only` (list checks with exact seed numbers) runs first;
-  `actions` (an HR journey: add, promote, correct with a rule error, terminate) depends on it and
-  has retries off, because a retry would replay steps against data the first attempt changed.
-- **Current size:** 303 unit + integration tests (shared 55, API 200, web 48) and 11 e2e tests.
+- **Two Playwright projects:** `read-only` (list, insights and currency checks with exact seed
+  numbers) runs first; `actions` (an HR journey: add, promote, correct with a rule error,
+  terminate) depends on it and has retries off, because a retry would replay steps against data
+  the first attempt changed.
+- **Ground truth:** the outlier detector is tested against the seed's planted outliers (see
+  _Validating the outlier detector_).
+- **Current size:** 369 unit + integration tests (shared 64, API 229, web 76) and 15 e2e tests.
 
 ## Performance
 
@@ -209,7 +266,12 @@ A global **display-currency selector** in the header (state in the URL) controls
 - The seed inserts in batches (`createMany`) in one transaction: 10k employees and 21.7k entries in 2.8 s.
 - Target: list and insight endpoints under 300 ms server-side on 10k employees.
 - **Measured** (local, 10k employees): `GET /employees` 3–20 ms across search, multi-filter,
-  pay sorts and deep pages; `GET /meta` 4 ms. Insight endpoints: to be measured when built.
+  pay sorts and deep pages; `GET /meta` 4 ms; pay stats 4–14 ms; outliers 6–32 ms; recent
+  changes 26–80 ms (window function over 21.7k pay entries).
+- **Statistics after bulk loads:** right after inserting 10k rows into freshly emptied tables,
+  Postgres still assumed they were nearly empty and the outlier query took **14 s instead of
+  40 ms** until autovacuum caught up. The seed now runs `ANALYZE` on the loaded tables, with a
+  test that checks the row estimates (and fails without it). CSV import must do the same.
 
 ## Seed data
 

@@ -69,3 +69,11 @@ countries. Built step by step in pair-programming style with AI.
 - Destructive DB commands (`prisma migrate reset`): Prisma blocks AI agents. Explain the
   command, its effect and its target, and ask the user explicitly. Only ever run them
   against `salary_dev` / `salary_test` / `salary_e2e`.
+- Insights: every insight reuses the list's filter SQL; LOCAL keeps own currency only for
+  by-country breakdowns, anything mixing countries is converted (USD by default); charts are
+  always single-currency. Display currency is remembered in the browser, not the URL; timelines
+  and forms stay in the record's own currency.
+- Build the next URL from `latestSearchParams()` (the URL now), never from render-time values.
+- Run `ANALYZE` on tables after any bulk insert (seed, CSV import).
+- The leak scan must gate the commit (abort on a match), never just print; scan history too
+  before pushing.
