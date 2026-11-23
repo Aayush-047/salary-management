@@ -1,4 +1,5 @@
 import type {
+  AuditEntryView,
   AuditFieldChange,
   AuditListResponse,
   CompensationEntryView,
@@ -89,15 +90,31 @@ export async function getEmployeeAudit(db: Db, code: string): Promise<AuditListR
   const employee = await requireEmployee(db, code);
   const rows = await findAuditForEmployee(db, employee.id);
   return {
-    items: rows.map((row) => ({
-      id: row.id,
-      createdAt: row.createdAt.toISOString(),
-      actor: { id: row.actor.id, name: row.actor.name },
-      action: row.action,
-      entityType: row.entityType,
-      entityId: row.entityId,
-      changes: row.changes as AuditFieldChange[],
-      reason: row.reason,
-    })),
+    items: rows.map(toAuditEntryView),
+  };
+}
+
+type AuditRowWithActor = {
+  id: number;
+  createdAt: Date;
+  actor: { id: number; name: string };
+  action: AuditEntryView["action"];
+  entityType: AuditEntryView["entityType"];
+  entityId: number;
+  changes: unknown;
+  reason: string | null;
+};
+
+/** One audit row as the API shows it (per employee and organisation-wide alike). */
+export function toAuditEntryView(row: AuditRowWithActor): AuditEntryView {
+  return {
+    id: row.id,
+    createdAt: row.createdAt.toISOString(),
+    actor: { id: row.actor.id, name: row.actor.name },
+    action: row.action,
+    entityType: row.entityType,
+    entityId: row.entityId,
+    changes: row.changes as AuditFieldChange[],
+    reason: row.reason,
   };
 }
