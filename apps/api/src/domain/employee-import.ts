@@ -15,7 +15,8 @@ import { CsvError, parse } from "csv-parse/sync";
  */
 
 export type ParsedRow = { row: number; values: Record<ImportColumn, string> };
-export type ReadResult = { rows: ParsedRow[]; issues: ImportIssue[] };
+/** `dataRows`: employee rows found in the file, including any that couldn't be read. */
+export type ReadResult = { rows: ParsedRow[]; issues: ImportIssue[]; dataRows: number };
 
 const COLUMN_NAMES = IMPORT_COLUMNS.map((c) => c.name);
 const BY_LOWERCASE = new Map<string, ImportColumn>(COLUMN_NAMES.map((n) => [n.toLowerCase(), n]));
@@ -39,7 +40,8 @@ function describeCsvError(error: CsvError): string {
  * an object key. Problems with the whole file stop the read; row problems are collected.
  */
 export function readEmployeeCsv(text: string): ReadResult {
-  if (text.trim() === "") return { rows: [], issues: [fileIssue("The file is empty")] };
+  if (text.trim() === "")
+    return { rows: [], issues: [fileIssue("The file is empty")], dataRows: 0 };
 
   let records: { record: string[]; info: InfoRecord }[];
   try {
@@ -62,6 +64,7 @@ export function readEmployeeCsv(text: string): ReadResult {
             typeof error.lines === "number" ? error.lines : null,
           ),
         ],
+        dataRows: 0,
       };
     }
     throw error;
@@ -87,10 +90,14 @@ export function readEmployeeCsv(text: string): ReadResult {
   }
   const missing = COLUMN_NAMES.filter((name) => !seen.has(name));
   if (missing.length > 0) issues.push(fileIssue(`Missing columns: ${missing.join(", ")}`, 1));
-  if (issues.length > 0) return { rows: [], issues };
+  if (issues.length > 0) return { rows: [], issues, dataRows: 0 };
 
   if (dataRecords.length === 0) {
-    return { rows: [], issues: [fileIssue("The file has no employee rows below the header")] };
+    return {
+      rows: [],
+      issues: [fileIssue("The file has no employee rows below the header")],
+      dataRows: 0,
+    };
   }
   if (dataRecords.length > MAX_IMPORT_ROWS) {
     return {
@@ -100,6 +107,7 @@ export function readEmployeeCsv(text: string): ReadResult {
           `The file has ${dataRecords.length.toLocaleString("en-US")} rows; the limit is ${MAX_IMPORT_ROWS.toLocaleString("en-US")}`,
         ),
       ],
+      dataRows: dataRecords.length,
     };
   }
 
@@ -117,7 +125,7 @@ export function readEmployeeCsv(text: string): ReadResult {
     });
     rows.push({ row: info.lines, values });
   }
-  return { rows, issues };
+  return { rows, issues, dataRows: dataRecords.length };
 }
 
 /**

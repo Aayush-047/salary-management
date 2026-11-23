@@ -12,8 +12,8 @@ import { checkHireDateChange, checkPayEntryDate, checkTerminationDate } from "..
 import { getCurrentUser, recordAudit, type Db } from "./audit.js";
 import { getEmployeeDetail, requireEmployee } from "./employee-detail-service.js";
 
-/** Fields shown in the audit log, in display order. */
-const PROFILE_FIELDS = [
+/** Fields shown in the audit log for a new employee, in display order (also used by imports). */
+export const PROFILE_FIELDS = [
   "firstName",
   "lastName",
   "email",
@@ -45,11 +45,20 @@ async function assertEmailAvailable(db: Db, email: string, exceptEmployeeId?: nu
   }
 }
 
-/** Next code after the highest existing one, e.g. E10000 → E10001. */
-async function nextEmployeeCode(db: Db): Promise<string> {
+/** E42 → "E00042". */
+export function formatEmployeeCode(n: number): string {
+  return `E${String(n).padStart(5, "0")}`;
+}
+
+/** Number for the next code after the highest existing one, e.g. E10000 → 10001. */
+export async function nextEmployeeNumber(db: Db): Promise<number> {
   const [row] = await db.$queryRaw<{ max: number | null }[]>`
     SELECT MAX(CAST(SUBSTRING("employeeCode" FROM 2) AS INTEGER)) AS max FROM "Employee"`;
-  return `E${String((row?.max ?? 0) + 1).padStart(5, "0")}`;
+  return (row?.max ?? 0) + 1;
+}
+
+async function nextEmployeeCode(db: Db): Promise<string> {
+  return formatEmployeeCode(await nextEmployeeNumber(db));
 }
 
 function assertActive(employee: { status: string; employeeCode: string }) {

@@ -46,6 +46,13 @@ function isJsonParseError(err: unknown): boolean {
   );
 }
 
+/** Body parsers mark an over-limit body with this type. */
+function isTooLarge(err: unknown): boolean {
+  return (
+    typeof err === "object" && err !== null && "type" in err && err.type === "entity.too.large"
+  );
+}
+
 // Express identifies error handlers by their four-argument signature, so `_next` must stay.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
@@ -57,7 +64,15 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   }
   if (err instanceof DomainError) {
     const body: ErrorBody = { error: { code: err.code, message: err.message } };
+    if (err.details !== undefined) body.error.details = err.details;
     res.status(err.status).json(body);
+    return;
+  }
+  if (isTooLarge(err)) {
+    const body: ErrorBody = {
+      error: { code: "FILE_TOO_LARGE", message: "The file is larger than 5 MB" },
+    };
+    res.status(413).json(body);
     return;
   }
   if (isJsonParseError(err)) {

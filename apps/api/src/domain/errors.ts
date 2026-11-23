@@ -8,6 +8,8 @@ export class DomainError extends Error {
     readonly status: 404 | 409 | 422,
     readonly code: string,
     message: string,
+    /** Extra data for the client, e.g. the full list of problems in an import. */
+    readonly details?: unknown,
   ) {
     super(message);
     this.name = "DomainError";
