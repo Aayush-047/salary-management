@@ -1,6 +1,8 @@
 import { Stack, Tabs, Text, Title } from "@mantine/core";
 import { useSearchParams } from "react-router";
 import { ExplorerTab } from "./ExplorerTab";
+import { OutliersTab } from "./OutliersTab";
+import { RecentChangesTab } from "./RecentChangesTab";
 
 const TABS = ["explorer", "outliers", "changes"] as const;
 type Tab = (typeof TABS)[number];
@@ -40,10 +42,10 @@ export function InsightsPage() {
           <ExplorerTab />
         </Tabs.Panel>
         <Tabs.Panel value="outliers" pt="md">
-          <Text c="dimmed">Coming in the next commit.</Text>
+          <OutliersTab />
         </Tabs.Panel>
         <Tabs.Panel value="changes" pt="md">
-          <Text c="dimmed">Coming in the next commit.</Text>
+          <RecentChangesTab />
         </Tabs.Panel>
       </Tabs>
     </Stack>

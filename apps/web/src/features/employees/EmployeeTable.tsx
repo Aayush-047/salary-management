@@ -3,6 +3,7 @@ import { Anchor, Badge, Skeleton, Table, Text, Tooltip, UnstyledButton } from "@
 import type { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useMoney, type ShownMoney } from "../../components/display-currency-context";
+import { backLinkState } from "../../lib/back-link";
 
 type Money = (amount: number, currency: string) => ShownMoney;
 
@@ -115,7 +116,7 @@ export function EmployeeTable({ items, loading, query, onSort }: Props) {
   const money = useMoney();
   const navigate = useNavigate();
   // Carried to the detail page so its "Back" link restores this filtered, sorted page.
-  const linkState = { listSearch: useLocation().search };
+  const linkState = backLinkState(`/employees${useLocation().search}`, "Back to employees");
   const detailPath = (e: EmployeeListItem) => `/employees/${e.employeeCode}`;
 
   const rows = loading

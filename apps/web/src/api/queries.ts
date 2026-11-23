@@ -4,8 +4,12 @@ import type {
   EmployeeListQuery,
   EmployeeListResponse,
   MetaResponse,
+  OutlierQuery,
+  OutlierResponse,
   PayStatsQuery,
   PayStatsResponse,
+  RecentChangesQuery,
+  RecentChangesResponse,
 } from "@salary/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toSearchParams } from "../features/employees/url-state";
@@ -69,6 +73,23 @@ export function usePayStats(query: PayStatsQuery) {
   return useQuery({
     queryKey: ["insights", "pay-stats", query],
     queryFn: () => apiGet<PayStatsResponse>(`/insights/pay-stats?${insightParams(query)}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useOutliers(query: OutlierQuery) {
+  return useQuery({
+    queryKey: ["insights", "outliers", query],
+    queryFn: () => apiGet<OutlierResponse>(`/insights/outliers?${insightParams(query)}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useRecentChanges(query: RecentChangesQuery) {
+  return useQuery({
+    queryKey: ["insights", "recent-changes", query],
+    queryFn: () =>
+      apiGet<RecentChangesResponse>(`/insights/recent-changes?${insightParams(query)}`),
     placeholderData: keepPreviousData,
   });
 }

@@ -23,14 +23,13 @@ import { EditProfileModal } from "../employee-actions/EditProfileModal";
 import { RelocateModal } from "../employee-actions/RelocateModal";
 import { TerminateModal } from "../employee-actions/TerminateModal";
 import { useMoney, type ShownMoney } from "../../components/display-currency-context";
+import { resolveBackLink } from "../../lib/back-link";
 import { AuditHistory } from "./AuditHistory";
 import { PayTimeline } from "./PayTimeline";
 
-/** The list passes its query string in navigation state, so "Back" restores the filtered view. */
-function useBackToList(): string {
-  const location = useLocation();
-  const from = (location.state as { listSearch?: string } | null)?.listSearch;
-  return `/employees${from ?? ""}`;
+/** Pages that open an employee pass where "Back" should return to (see lib/back-link). */
+function useBackLink() {
+  return resolveBackLink(useLocation().state);
 }
 
 function Stat({ label, shown }: { label: string; shown: ShownMoney }) {
@@ -92,7 +91,7 @@ function Profile({ employee }: { employee: EmployeeDetail }) {
 
 export function EmployeeDetailPage() {
   const { code = "" } = useParams();
-  const backTo = useBackToList();
+  const backLink = useBackLink();
   const employee = useEmployee(code);
   // Only ask for the history once the employee is known to exist.
   const audit = useEmployeeAudit(code, { enabled: employee.isSuccess });
@@ -103,9 +102,9 @@ export function EmployeeDetailPage() {
   const closeAction = () => setAction(null);
 
   const back = (
-    <Anchor component={Link} to={backTo} size="sm">
+    <Anchor component={Link} to={backLink.backTo} size="sm">
       <Group gap={4}>
-        <IconArrowLeft size={14} /> Back to employees
+        <IconArrowLeft size={14} /> {backLink.backLabel}
       </Group>
     </Anchor>
   );
