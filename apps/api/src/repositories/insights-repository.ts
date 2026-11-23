@@ -1,4 +1,4 @@
-import type { PayMetric, PayStatsGroup, PayStatsQuery } from "@salary/shared";
+import type { OutlierQuery, PayMetric, PayStatsGroup, PayStatsQuery } from "@salary/shared";
 import type { PrismaClient } from "../db/client.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { FROM, whereClause } from "./employee-repository.js";
@@ -73,4 +73,103 @@ export async function findPayStats(
     ) x
     GROUP BY key, label
     ORDER BY ${group ? group.order : Prisma.sql`key`}`;
+}
+
+export type OutlierRow = {
+  employeeCode: string;
+  firstName: string;
+  lastName: string;
+  countryCode: string;
+  jobTitle: string;
+  level: number;
+  pay: number;
+  peerMedian: number;
+  currency: string;
+  ratio: number;
+  peerCount: number;
+};
+
+export type OutlierSummaryRow = {
+  peerGroups: number;
+  employeesAnalysed: number;
+  smallPeerGroups: number;
+  employeesNotAnalysed: number;
+  underpaid: number;
+  overpaid: number;
+};
+
+/**
+ * Every filtered employee with their peer group's size and median pay. Peers share job title,
+ * level and country, so a group is always one currency and the ratio needs no conversion.
+ */
+function scoredEmployees(query: OutlierQuery): Prisma.Sql {
+  return Prisma.sql`
+    WITH base AS (
+      SELECT e."employeeCode", e."firstName", e."lastName", e."countryCode", e."jobTitleId",
+             j.name AS "jobTitle", e.level::int AS level, e."currentCurrency" AS currency,
+             ${metricSql(query.metric)}::float8 AS pay
+      ${FROM}
+      ${whereClause(query)}
+    ),
+    peers AS (
+      SELECT "countryCode", "jobTitleId", level, COUNT(*)::int AS "peerCount",
+             (percentile_cont(0.5) WITHIN GROUP (ORDER BY pay))::float8 AS "peerMedian"
+      FROM base
+      GROUP BY "countryCode", "jobTitleId", level
+    ),
+    scored AS (
+      SELECT b.*, p."peerCount", p."peerMedian", b.pay / p."peerMedian" AS ratio
+      FROM base b JOIN peers p USING ("countryCode", "jobTitleId", level)
+    )`;
+}
+
+function flaggedCondition(query: OutlierQuery): Prisma.Sql {
+  const under = Prisma.sql`ratio < ${query.low}::float8`;
+  const over = Prisma.sql`ratio > ${query.high}::float8`;
+  const band =
+    query.direction === "under"
+      ? under
+      : query.direction === "over"
+        ? over
+        : Prisma.sql`(${under} OR ${over})`;
+  return Prisma.sql`"peerCount" >= ${query.minPeers} AND ${band}`;
+}
+
+/** Flagged employees, furthest from their peer median first (stable by code), one page. */
+export async function findOutliers(
+  prisma: PrismaClient,
+  query: OutlierQuery,
+): Promise<{ rows: OutlierRow[]; total: number }> {
+  const flagged = flaggedCondition(query);
+  const [rows, counts] = await Promise.all([
+    prisma.$queryRaw<OutlierRow[]>`
+      ${scoredEmployees(query)}
+      SELECT "employeeCode", "firstName", "lastName", "countryCode", "jobTitle", level, pay,
+             "peerMedian", currency, ratio, "peerCount"
+      FROM scored
+      WHERE ${flagged}
+      ORDER BY ABS(ratio - 1) DESC, "employeeCode"
+      LIMIT ${query.pageSize} OFFSET ${(query.page - 1) * query.pageSize}`,
+    prisma.$queryRaw<{ total: number }[]>`
+      ${scoredEmployees(query)}
+      SELECT COUNT(*)::int AS total FROM scored WHERE ${flagged}`,
+  ]);
+  return { rows, total: counts[0]?.total ?? 0 };
+}
+
+/** How much of the population could be judged, and how many fall outside the band. */
+export async function findOutlierSummary(
+  prisma: PrismaClient,
+  query: OutlierQuery,
+): Promise<OutlierSummaryRow> {
+  const [summary] = await prisma.$queryRaw<OutlierSummaryRow[]>`
+    ${scoredEmployees(query)}
+    SELECT
+      (SELECT COUNT(*) FROM peers WHERE "peerCount" >= ${query.minPeers})::int AS "peerGroups",
+      (SELECT COALESCE(SUM("peerCount"), 0) FROM peers WHERE "peerCount" >= ${query.minPeers})::int AS "employeesAnalysed",
+      (SELECT COUNT(*) FROM peers WHERE "peerCount" < ${query.minPeers})::int AS "smallPeerGroups",
+      (SELECT COALESCE(SUM("peerCount"), 0) FROM peers WHERE "peerCount" < ${query.minPeers})::int AS "employeesNotAnalysed",
+      (SELECT COUNT(*) FROM scored WHERE "peerCount" >= ${query.minPeers} AND ratio < ${query.low}::float8)::int AS underpaid,
+      (SELECT COUNT(*) FROM scored WHERE "peerCount" >= ${query.minPeers} AND ratio > ${query.high}::float8)::int AS overpaid`;
+  return summary!;
 }
