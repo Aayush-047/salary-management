@@ -1,6 +1,7 @@
 import { AppShell, Group, NavLink, Title } from "@mantine/core";
 import { Navigate, NavLink as RouterNavLink, Route, Routes } from "react-router";
 import { ApiStatus } from "./components/ApiStatus";
+import { AuditLogPage } from "./features/audit/AuditLogPage";
 import { CurrencySelect } from "./components/CurrencySelect";
 import { EmployeeDetailPage } from "./features/employee-detail/EmployeeDetailPage";
 import { ImportPage } from "./features/import/ImportPage";
@@ -41,11 +42,7 @@ export function App() {
           <Route path="/employees/:code" element={<EmployeeDetailPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/import" element={<ImportPage />} />
-          {NAV_ITEMS.filter(
-            (item) => !["/employees", "/insights", "/import"].includes(item.path),
-          ).map((item) => (
-            <Route key={item.path} path={item.path} element={<Placeholder title={item.label} />} />
-          ))}
+          <Route path="/audit" element={<AuditLogPage />} />
           <Route path="*" element={<Placeholder title="Page not found" />} />
         </Routes>
       </AppShell.Main>

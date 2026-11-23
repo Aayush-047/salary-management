@@ -1,5 +1,7 @@
 import type {
   AuditListResponse,
+  AuditLogQuery,
+  AuditLogResponse,
   EmployeeDetail,
   EmployeeListQuery,
   EmployeeListResponse,
@@ -90,6 +92,14 @@ export function useRecentChanges(query: RecentChangesQuery) {
     queryKey: ["insights", "recent-changes", query],
     queryFn: () =>
       apiGet<RecentChangesResponse>(`/insights/recent-changes?${insightParams(query)}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useAuditLog(query: AuditLogQuery) {
+  return useQuery({
+    queryKey: ["audit", query],
+    queryFn: () => apiGet<AuditLogResponse>(`/audit?${insightParams(query)}`),
     placeholderData: keepPreviousData,
   });
 }

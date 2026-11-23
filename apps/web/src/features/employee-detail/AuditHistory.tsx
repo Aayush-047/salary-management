@@ -1,5 +1,6 @@
 import type { AuditEntryView } from "@salary/shared";
-import { Group, Paper, Stack, Table, Text } from "@mantine/core";
+import { Anchor, Group, Paper, Stack, Table, Text } from "@mantine/core";
+import { Link } from "react-router";
 import { auditHeadline, fieldLabel, formatAuditValue } from "./format";
 
 const dateTime = new Intl.DateTimeFormat("en-GB", {
@@ -8,11 +9,34 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-function AuditItem({ entry }: { entry: AuditEntryView }) {
+/** One change; in the org-wide log it is headed by the employee it concerns (a link). */
+export function AuditItem({
+  entry,
+  employee,
+}: {
+  entry: AuditEntryView;
+  employee?: { employeeCode: string; name: string; linkState: object };
+}) {
   return (
     <Paper withBorder radius="md" p="sm">
       <Group justify="space-between" mb={6} wrap="wrap">
         <Text fw={600} size="sm">
+          {employee && (
+            <>
+              <Anchor
+                component={Link}
+                to={`/employees/${employee.employeeCode}`}
+                state={employee.linkState}
+                fw={600}
+              >
+                {employee.name}
+              </Anchor>{" "}
+              <Text span c="dimmed" size="xs">
+                {employee.employeeCode}
+              </Text>
+              {" · "}
+            </>
+          )}
           {auditHeadline(entry)}
         </Text>
         <Text size="xs" c="dimmed">
