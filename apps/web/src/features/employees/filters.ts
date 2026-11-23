@@ -6,7 +6,9 @@ import { DEFAULT_QUERY } from "./url-state";
  * department, job title and level counts once, plus one for a non-default status.
  * Search is not counted; it has its own box.
  */
-export function activeFilterCount(query: EmployeeListQuery): number {
+export function activeFilterCount(
+  query: Pick<EmployeeListQuery, "status" | "country" | "department" | "jobTitle" | "level">,
+): number {
   return (
     (query.status !== DEFAULT_QUERY.status ? 1 : 0) +
     (query.country?.length ?? 0) +

@@ -4,6 +4,8 @@ import type {
   EmployeeListQuery,
   EmployeeListResponse,
   MetaResponse,
+  PayStatsQuery,
+  PayStatsResponse,
 } from "@salary/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toSearchParams } from "../features/employees/url-state";
@@ -50,5 +52,23 @@ export function useEmployeeAudit(code: string, options: { enabled: boolean }) {
     queryKey: ["employee", code, "audit"],
     queryFn: () => apiGet<AuditListResponse>(`/employees/${encodeURIComponent(code)}/audit`),
     retry: retryUnlessClientError,
+  });
+}
+
+/** Insight queries share the list's filters; build the query string the same way. */
+function insightParams(query: Record<string, unknown>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined) continue;
+    for (const item of Array.isArray(value) ? value : [value]) params.append(key, String(item));
+  }
+  return params.toString();
+}
+
+export function usePayStats(query: PayStatsQuery) {
+  return useQuery({
+    queryKey: ["insights", "pay-stats", query],
+    queryFn: () => apiGet<PayStatsResponse>(`/insights/pay-stats?${insightParams(query)}`),
+    placeholderData: keepPreviousData,
   });
 }

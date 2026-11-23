@@ -4,6 +4,7 @@ import { ApiStatus } from "./components/ApiStatus";
 import { CurrencySelect } from "./components/CurrencySelect";
 import { EmployeeDetailPage } from "./features/employee-detail/EmployeeDetailPage";
 import { EmployeesPage } from "./features/employees/EmployeesPage";
+import { InsightsPage } from "./features/insights/InsightsPage";
 import { Placeholder } from "./pages/Placeholder";
 
 const NAV_ITEMS = [
@@ -37,9 +38,16 @@ export function App() {
           <Route path="/" element={<Navigate to="/employees" replace />} />
           <Route path="/employees" element={<EmployeesPage />} />
           <Route path="/employees/:code" element={<EmployeeDetailPage />} />
-          {NAV_ITEMS.filter((item) => item.path !== "/employees").map((item) => (
-            <Route key={item.path} path={item.path} element={<Placeholder title={item.label} />} />
-          ))}
+          <Route path="/insights" element={<InsightsPage />} />
+          {NAV_ITEMS.filter((item) => item.path !== "/employees" && item.path !== "/insights").map(
+            (item) => (
+              <Route
+                key={item.path}
+                path={item.path}
+                element={<Placeholder title={item.label} />}
+              />
+            ),
+          )}
           <Route path="*" element={<Placeholder title="Page not found" />} />
         </Routes>
       </AppShell.Main>

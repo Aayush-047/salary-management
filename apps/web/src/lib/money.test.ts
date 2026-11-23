@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMoney } from "./money";
+import { formatMoney, formatMoneyCompact } from "./money";
 
 describe("formatMoney", () => {
   it.each([
@@ -11,5 +11,15 @@ describe("formatMoney", () => {
     { amount: 110_000, currency: "SGD", expected: "SGD 110,000" },
   ])("formats $amount $currency as $expected", ({ amount, currency, expected }) => {
     expect(formatMoney(amount, currency).replace(/[\u00a0\u202f]/g, " ")).toBe(expected);
+  });
+});
+
+describe("formatMoneyCompact", () => {
+  it.each([
+    { amount: 852_300_000, currency: "USD", expected: "$852.3M" },
+    { amount: 1_250_000_000, currency: "EUR", expected: "€1.3B" },
+    { amount: 64_000, currency: "GBP", expected: "£64K" },
+  ])("formats $amount $currency as $expected", ({ amount, currency, expected }) => {
+    expect(formatMoneyCompact(amount, currency)).toBe(expected);
   });
 });

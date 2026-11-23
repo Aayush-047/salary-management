@@ -13,3 +13,13 @@ export function formatMoney(amount: number, currency: string): string {
   }
   return formatter.format(amount);
 }
+
+/** Large totals in short form, e.g. formatMoneyCompact(852_300_000, "USD") → "$852.3M". */
+export function formatMoneyCompact(amount: number, currency: string): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(amount);
+}

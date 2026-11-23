@@ -1,4 +1,5 @@
 import { EmployeeListQuerySchema, type EmployeeListQuery } from "@salary/shared";
+import { parseSearchParams } from "../../lib/search-params";
 
 /** The list state when the URL has no parameters. */
 export const DEFAULT_QUERY: EmployeeListQuery = EmployeeListQuerySchema.parse({});
@@ -6,31 +7,12 @@ export const DEFAULT_QUERY: EmployeeListQuery = EmployeeListQuerySchema.parse({}
 const MULTI_VALUE_KEYS = ["country", "department", "jobTitle", "level"] as const;
 const FILTER_KEYS = ["search", "status", ...MULTI_VALUE_KEYS] as const;
 
-/** URLSearchParams → plain object; repeated keys become arrays. */
-function toRecord(params: URLSearchParams): Record<string, string | string[]> {
-  const record: Record<string, string | string[]> = {};
-  for (const key of new Set(params.keys())) {
-    const values = params.getAll(key);
-    record[key] = values.length > 1 ? values : values[0]!;
-  }
-  return record;
-}
-
 /**
  * Reads the list state from the URL using the same schema the API validates with.
  * Invalid parameters (e.g. a hand-edited `level=9`) are dropped instead of breaking the page.
  */
 export function parseListQuery(params: URLSearchParams): EmployeeListQuery {
-  const record = toRecord(params);
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const result = EmployeeListQuerySchema.safeParse(record);
-    if (result.success) return result.data;
-    for (const issue of result.error.issues) {
-      const key = issue.path[0];
-      if (typeof key === "string") delete record[key];
-    }
-  }
-  return DEFAULT_QUERY;
+  return parseSearchParams(EmployeeListQuerySchema, params);
 }
 
 /** List state → URL parameters, leaving out defaults so URLs stay short. */
