@@ -324,6 +324,28 @@ too, so it doesn't avoid this.
 - **Measured** (local Docker Postgres): 10,000 employees and 21,697 compensation entries;
   generation ~20 ms; full seed 2.8 s; reset + seed 3.8 s.
 
+## Deployment
+
+| Part     | Where               | Config         | Notes                                                                     |
+| -------- | ------------------- | -------------- | ------------------------------------------------------------------------- |
+| Web      | Netlify (static)    | `netlify.toml` | Built from the repo root; every path serves `index.html` (deep links)     |
+| API      | Render (Node, free) | `render.yaml`  | Migrations run at start; health check `/health`; sleeps after 15 min idle |
+| Database | Neon Postgres 17    | n/a            | Same region as the API (US West, Oregon); direct (unpooled) connection    |
+
+- **Live:** https://salary-management-app.netlify.app, API https://salary-api-qbhq.onrender.com.
+- **Secrets** (`DATABASE_URL`, `CORS_ORIGIN`) live only in the Render dashboard; `VITE_API_URL` is
+  public by nature (it is compiled into the web bundle).
+- **Seeding** is a one-time step run from a developer machine against the hosted database, so
+  its connection string never goes into the repository or CI. Seed transactions allow 30 s to
+  start and 120 s to finish: a serverless database may be waking up, and each statement pays
+  the network round trip.
+- **Cold starts:** after 15 idle minutes the first request takes up to a minute; the header
+  badge says "API waking up…" (with an explanation) after 3 s and the health check retries.
+- **Checked before going live:** the compiled API against a real database, the production web
+  build with deep links, and the hosting build commands on a clean copy. Then the live site was
+  driven in a browser, including one write (a pay change noted as a deployment check, kept in
+  the audit log).
+
 ## Known issues
 
 | Issue                                                                                                                                                                                                                                                                          | Risk                                                                                                                   | Plan                                                                                                                                                                            |

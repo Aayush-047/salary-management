@@ -2,7 +2,10 @@
 
 A web app for an HR Manager to manage salary data for ~10,000 employees across multiple countries, and to answer questions about how the organisation pays people.
 
-> 🚧 Work in progress: being built step by step. See the commit history and [docs/](docs/) for how it evolved.
+**Live demo:** https://salary-management-app.netlify.app (API: https://salary-api-qbhq.onrender.com/health).
+The API runs on a free tier that sleeps when idle, so the first request can take up to a minute.
+
+Built step by step; see the commit history and [docs/](docs/) for how it evolved.
 
 ## Stack
 

@@ -292,3 +292,27 @@ push. Since the workflow can only truly run on GitHub, the AI rehearsed it first
 of the repository with no `.env` and no `node_modules`, `npm ci`, then every command with only
 the environment variables the workflow sets (`CI=1` included). All checks and 18 e2e tests
 passed. It noted pinning actions to commit SHAs as a hardening step rather than doing it now.
+
+## 11. Deploy
+
+- **Production build first.** Before pushing, the AI ran the compiled API against the real
+  database (the generated Prisma 7 client had only been tested in development mode) and served
+  the production web build to check deep links. Both worked.
+- **Public or private.** I chose a public repository. Before agreeing, the AI scanned every file,
+  commit message and the whole history for softer hints than its usual leak scan ("reviewer",
+  "submission", "deadline" and similar). It found only UI words ("submit" buttons, Mantine's
+  `Tabs.Panel`) and pointed out that commit metadata shows my email address; I kept it.
+- **Seeding a remote database failed** with "Unable to start a transaction in the given time".
+  Prisma's 2 s / 5 s transaction defaults were fine locally but not for a serverless database
+  waking up over a long network path. The AI confirmed nothing had been written, then gave both
+  seed transactions generous limits.
+- **A secret in the chat.** I ran the seed command with the database connection string inline in
+  the AI session, so the password ended up in the session transcript. The AI flagged it straight
+  away; I reset the password, updated Render, and re-ran the seed in a separate terminal. Lesson:
+  secrets go into dashboards or a terminal outside the AI session, never into the conversation.
+- **Vercel → Netlify.** I had trouble signing in to Vercel, so I asked to switch hosts. The AI
+  replaced `vercel.json` with `netlify.toml`, rehearsed Netlify's build command on a clean copy,
+  and updated the docs.
+- **Checked live:** the AI drove the deployed site in a browser (list, filtered deep link,
+  outliers, the audit log) and made one write from the site's own origin, a pay change noted as a
+  deployment check, which is kept in the audit log like any other change.
