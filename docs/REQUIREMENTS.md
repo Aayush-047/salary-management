@@ -16,18 +16,18 @@ Replace spreadsheet-based salary management for an organisation of about 10,000 
 - Employee fields: employee ID, name, email, country, department, job title, level (L1–L6), hire date, status (active or terminated, with an end date).
 - Compensation: annual **base salary** and **target annual bonus**, in the employee's **local currency**. **Total cash = base + target bonus.**
 - Browse all 10,000 employees with server-side search, filters (country, department, title, level, status), sorting and pagination.
-- Create, edit and terminate employees through forms. Terminating someone changes their status; it never deletes them.
+- Create, edit, relocate (new country and pay in its currency, as one event) and terminate employees through forms. Terminating someone changes their status; it never deletes them.
 
 **2. Salary history & audit**
 
 - Each pay change (raise, promotion, adjustment) adds a compensation entry with an effective date, base, target bonus and reason. An employee's page shows the full timeline.
-- Mistakes are fixed by editing the entry; a reason is required.
+- Mistakes are fixed by correcting the entry (also for leavers); a reason is required.
 - **Audit log:** every create, edit or termination of an employee or compensation entry is recorded with field, old → new, who, when and reason. It can be viewed per employee and across the org.
 - For the demo the actor is a single fixed "HR Manager" user. Each audit record stores an actor ID, so real users drop in once auth exists.
 
 **3. CSV import (migration from Excel)**
 
-- Upload a CSV of employees. Every row is validated, with a per-row error report (row number, field, reason). Rows are imported only when the whole file is valid; there are no partial imports.
+- Upload a CSV of **new** employees (existing people are changed in the app, where every change is audited). Every row is validated, with a per-row error report (row number, field, reason). Rows are imported only when the whole file is valid; there are no partial imports.
 
 **4. Pay insights**
 
@@ -51,6 +51,7 @@ Replace spreadsheet-based salary management for an organisation of about 10,000 
 | Live FX rates                             | They add an external dependency and make numbers shift day to day. A dated static table gives reproducible numbers.                                                                                                  |
 | Future-dated / retroactive changes        | Scheduling changes by effective date adds a lot of complexity. History records changes as they're made.                                                                                                              |
 | Payroll processing, tax, Excel export     | Different products, outside "manage and understand pay".                                                                                                                                                             |
+| Rehiring a leaver                         | Leavers keep their record (and email), so re-adding or re-importing them is rejected. Rehiring needs its own rules: the same or a new code, and how the earlier history is shown.                                    |
 
 ## Success criteria
 

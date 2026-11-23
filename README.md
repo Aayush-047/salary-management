@@ -7,11 +7,26 @@ The API runs on a free tier that sleeps when idle, so the first request can take
 
 Built step by step; see the commit history and [docs/](docs/) for how it evolved.
 
+## What it does
+
+- **Employees:** search, filter and sort 10,000 people across 7 countries; add, edit, relocate
+  and record leavers (who are kept, never deleted).
+- **Pay history:** every raise, promotion or adjustment is a dated entry in local currency (base
+  salary + target bonus); mistakes are fixed by corrections that need a reason.
+- **Audit log:** every change, who made it, when, old → new and why; per employee and across the
+  organisation.
+- **Insights:** pay statistics by country, department, title or level; peers paid well above or
+  below their group; recent raises. Any display currency, with converted values marked ≈.
+- **CSV import:** add new employees from a spreadsheet; every problem is listed by row and
+  column, and nothing is imported unless the whole file is valid.
+- **Seed:** a deterministic dataset of 10,000 employees with realistic pay, leavers and planted
+  outliers.
+
 ## Stack
 
 - **API:** Node.js, Express, TypeScript, Prisma, PostgreSQL
 - **Web:** React, Vite, Mantine, TanStack Query, React Router
-- **Tooling:** npm workspaces, Vitest, ESLint, Prettier, Docker Compose
+- **Tooling:** npm workspaces, Vitest, Playwright, ESLint, Prettier, Docker Compose, GitHub Actions
 
 ## Quick start
 
@@ -74,6 +89,8 @@ apps/api         Express API
 apps/web         React frontend
 packages/shared  Constants and validation schemas shared by API and web
 docs/            Requirements, design notes and AI usage log
+e2e/             Playwright browser tests
+.github/         CI workflow
 ```
 
 ## Docs
@@ -81,3 +98,4 @@ docs/            Requirements, design notes and AI usage log
 - [Requirements](docs/REQUIREMENTS.md): goal, scope and what's deliberately left out
 - [Design](docs/DESIGN.md): architecture, data model, API, trade-offs, performance
 - [AI usage](docs/AI_USAGE.md): how AI tools were used, and where I overrode them
+- [What I'd do next](docs/DESIGN.md#what-id-do-next)

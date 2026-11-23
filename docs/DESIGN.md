@@ -198,9 +198,9 @@ React + Vite + Mantine, with TanStack Query for server state and React Router.
 | Page                | Contents                                                                                           |
 | ------------------- | -------------------------------------------------------------------------------------------------- |
 | **Employees**       | Server-paginated table with search and filters                                                     |
-| **Employee detail** | Profile, pay timeline, audit history, edit / terminate                                             |
+| **Employee detail** | Profile, pay timeline, audit history; change pay, edit, relocate, terminate, correct entries       |
 | **Insights**        | Pay explorer, outliers (with band controls), recent changes                                        |
-| **Import**          | CSV upload with a row-level error table                                                            |
+| **Import**          | On-page instructions and template; check then import; every problem by row and column              |
 | **Audit log**       | Every change, newest first, headed by the employee (a link); filters for employee, type and period |
 
 A global **display-currency selector** in the header ("Local currency" or any currency in the FX
@@ -276,7 +276,8 @@ too, so it doesn't avoid this.
   `_e2e`, so a misconfigured URL can never truncate dev or production data.
 - **Two Playwright projects:** `read-only` (list, insights and currency checks with exact seed
   numbers) runs first; `actions` (an HR journey: add, promote, correct with a rule error,
-  terminate) depends on it and has retries off, because a retry would replay steps against data
+  terminate, then the org-wide audit log; and a CSV import with an error report, a fix and the
+  import) depends on it and has retries off, because a retry would replay steps against data
   the first attempt changed.
 - **Ground truth:** the outlier detector is tested against the seed's planted outliers (see
   _Validating the outlier detector_).
@@ -305,7 +306,9 @@ too, so it doesn't avoid this.
 - **Statistics after bulk loads:** right after inserting 10k rows into freshly emptied tables,
   Postgres still assumed they were nearly empty and the outlier query took **14 s instead of
   40 ms** until autovacuum caught up. The seed now runs `ANALYZE` on the loaded tables, with a
-  test that checks the row estimates (and fails without it). CSV import must do the same.
+  test that checks the row estimates (and fails without it). CSV import does the same.
+- **Hosted** (Render + Neon, both in Oregon, from a browser in India): about 0.4 s per request,
+  almost all of it network; the first request after 15 idle minutes waits for the API to wake.
 
 ## Seed data
 
@@ -343,14 +346,34 @@ too, so it doesn't avoid this.
   badge says "API waking up…" (with an explanation) after 3 s and the health check retries.
 - **Checked before going live:** the compiled API against a real database, the production web
   build with deep links, and the hosting build commands on a clean copy. Then the live site was
-  driven in a browser, including one write (a pay change noted as a deployment check, kept in
-  the audit log).
+  driven in a browser, including one write (a pay change noted as a deployment check). The
+  hosted data was then reset to the seed, so the demo starts with an empty audit log.
 
 ## Known issues
 
 | Issue                                                                                                                                                                                                                                                                          | Risk                                                                                                                   | Plan                                                                                                                                                                            |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm audit`: high-severity ReDoS in `effect` ≤ 3.22.0 ([GHSA-7589-6fvf-x4pw](https://github.com/advisories/GHSA-7589-6fvf-x4pw)), pulled in by the Prisma CLI (`prisma` → `@prisma/config` → `effect@3.20.0`, pinned exactly).                                                 | Negligible. Dev-time CLI only: it parses our own config file, never user input, and is not part of the runtime client. | Remove when Prisma updates its pin. `npm audit fix --force` would downgrade Prisma to v6, and an npm `overrides` entry did not apply cleanly against the pin (see AI_USAGE.md). |
-| Web production bundle is 624 kB (190 kB gzipped), above Vite's 500 kB warning; most of it is Mantine.                                                                                                                                                                          | Low for an internal tool on office networks.                                                                           | Split routes into lazily loaded chunks in the wrap-up step if time allows.                                                                                                      |
+| Web production bundle is 624 kB (190 kB gzipped), above Vite's 500 kB warning; most of it is Mantine.                                                                                                                                                                          | Low for an internal tool on office networks.                                                                           | Split pages into lazily loaded chunks (see _What I'd do next_).                                                                                                                 |
 | CI actions are pinned to major-version tags (`actions/checkout@v7`), which a compromised tag could change.                                                                                                                                                                     | Low for this project.                                                                                                  | Pin each action to a full commit SHA (with a tool such as Dependabot to keep them current) if this becomes a production pipeline.                                               |
 | `pg` prints "Calling client.query() when the client is already executing a query is deprecated" during some transactions. Reproduced with a single `findFirst({ include })` inside `$transaction`: Prisma's adapter runs the include's queries concurrently on one connection. | None today: `pg` 8 queues the queries. It becomes an error in `pg` 9.                                                  | Not our code; keep `pg` on 8 until Prisma's adapter handles it, then upgrade both together.                                                                                     |
+
+## What I'd do next
+
+In priority order:
+
+1. **Sign-in and roles.** SSO plus role-based access (who may see or change which countries'
+   pay). `getCurrentUser()` is the single place it plugs in, and every audit row already stores
+   an actor ID.
+2. **Rehiring a leaver.** A "Rehire" action on the leaver's record: new hire date and starting
+   pay as a pay entry, one audit row, the earlier history kept on the same record.
+3. **Pay-equity analysis**, done carefully: it needs sensitive data, consent and statistical
+   controls (role, level, country, tenure) to be meaningful rather than misleading.
+4. **Dated FX history.** Rates per date, so converted history uses the rate of its time; today
+   one static table converts everything.
+5. **Smaller first load.** Split each page into its own lazily loaded chunk (the bundle is
+   624 kB, mostly Mantine).
+6. **CI hardening.** Pin actions to commit SHAs and let Dependabot keep them and npm packages
+   current.
+7. **Scale.** Keyset paging and materialised peer statistics if the data grows by orders of
+   magnitude; at 10,000 employees offset paging and live SQL stay well under 100 ms.

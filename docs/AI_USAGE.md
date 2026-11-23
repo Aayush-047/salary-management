@@ -315,4 +315,26 @@ passed. It noted pinning actions to commit SHAs as a hardening step rather than 
   and updated the docs.
 - **Checked live:** the AI drove the deployed site in a browser (list, filtered deep link,
   outliers, the audit log) and made one write from the site's own origin, a pay change noted as a
-  deployment check, which is kept in the audit log like any other change.
+  deployment check, recorded in the audit log like any other change.
+- **A clean start for the demo.** I asked to reset the hosted data. Destructive commands may only
+  target the local dev, test and e2e databases, so the AI explained the command, its target and
+  effect, and I ran it myself outside the session; the AI then confirmed 10,000 employees, an
+  empty audit log and the same outlier counts as locally.
+
+## 12. Wrap-up: what worked
+
+- **Options, then my call.** Every decision came as a/b/c with a recommendation, and nothing was
+  written before I agreed. The tables above show where I overrode the AI (auth, correcting
+  mistakes, the audit log, the display currency, the filter layout).
+- **Verification found what tests alone passed over.** Running the real app, measuring and
+  re-reading its own work, the AI found: "today" rejected every morning east of UTC (fixed with
+  the UTC+14 rule), a 14 s query after bulk loads (fixed with `ANALYZE`), `78.000` imported as
+  78, and quick clicks dropping each other's URL changes. Each now has a test.
+- **The AI's own slips were caught by checks it set up:** a commit that went ahead despite a
+  leak-scan hit (the scan now aborts the commit), wrong test locators, expected values computed
+  by hand. All were fixed before moving on and are recorded above.
+- **What I found myself:** the filter panel pushing the page around (now a modal), that CSV rules
+  belong on the page as instructions, and, while testing the live app, that a leaver can't be
+  re-imported. That last one follows from my own decisions (leavers are kept; import is for new
+  people) and I left it out of scope on purpose; rehiring is first among the next steps after
+  sign-in.
