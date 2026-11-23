@@ -283,3 +283,12 @@ The AI's own slips, caught and corrected:
 Before moving on, the AI checked the requirements against what was built and pointed out that the
 org-wide audit view promised in REQUIREMENTS.md still showed a "Coming soon" placeholder in the
 sidebar. I chose to build it rather than drop it from scope.
+
+## 10. CI
+
+The AI drafted a GitHub Actions workflow (lint, format, typecheck, unit + integration tests,
+then the e2e suite; Playwright report uploaded on failure) and I chose to run e2e on every
+push. Since the workflow can only truly run on GitHub, the AI rehearsed it first: a fresh clone
+of the repository with no `.env` and no `node_modules`, `npm ci`, then every command with only
+the environment variables the workflow sets (`CI=1` included). All checks and 18 e2e tests
+passed. It noted pinning actions to commit SHAs as a hardening step rather than doing it now.
