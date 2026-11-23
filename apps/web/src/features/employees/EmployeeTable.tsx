@@ -1,15 +1,27 @@
 import type { EmployeeListItem, EmployeeListQuery, EmployeeSortField } from "@salary/shared";
-import { Anchor, Badge, Skeleton, Table, Text, UnstyledButton } from "@mantine/core";
+import { Anchor, Badge, Skeleton, Table, Text, Tooltip, UnstyledButton } from "@mantine/core";
 import type { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { formatMoney } from "../../lib/money";
+import { useMoney, type ShownMoney } from "../../components/display-currency-context";
+
+type Money = (amount: number, currency: string) => ShownMoney;
+
+/** An amount; when converted, hovering shows the original. */
+function MoneyCell({ shown }: { shown: ShownMoney }) {
+  if (!shown.converted) return <>{shown.text}</>;
+  return (
+    <Tooltip label={`${shown.original} (local)`} withArrow>
+      <span>{shown.text}</span>
+    </Tooltip>
+  );
+}
 
 type Column = {
   key: string;
   label: string;
   sortField?: EmployeeSortField;
   numeric?: boolean;
-  render: (e: EmployeeListItem) => ReactNode;
+  render: (e: EmployeeListItem, money: Money) => ReactNode;
 };
 
 const COLUMNS: Column[] = [
@@ -54,20 +66,20 @@ const COLUMNS: Column[] = [
     label: "Base",
     sortField: "baseSalary",
     numeric: true,
-    render: (e) => formatMoney(e.baseSalary, e.currency),
+    render: (e, money) => <MoneyCell shown={money(e.baseSalary, e.currency)} />,
   },
   {
     key: "bonus",
     label: "Target bonus",
     numeric: true,
-    render: (e) => formatMoney(e.targetBonus, e.currency),
+    render: (e, money) => <MoneyCell shown={money(e.targetBonus, e.currency)} />,
   },
   {
     key: "total",
     label: "Total cash",
     sortField: "totalCash",
     numeric: true,
-    render: (e) => formatMoney(e.totalCash, e.currency),
+    render: (e, money) => <MoneyCell shown={money(e.totalCash, e.currency)} />,
   },
   { key: "hired", label: "Hired", sortField: "hireDate", render: (e) => e.hireDate },
 ];
@@ -100,6 +112,7 @@ function SortableHeader({
 }
 
 export function EmployeeTable({ items, loading, query, onSort }: Props) {
+  const money = useMoney();
   const navigate = useNavigate();
   // Carried to the detail page so its "Back" link restores this filtered, sorted page.
   const linkState = { listSearch: useLocation().search };
@@ -133,7 +146,7 @@ export function EmployeeTable({ items, loading, query, onSort }: Props) {
                   {employee.employeeCode}
                 </Anchor>
               ) : (
-                c.render(employee)
+                c.render(employee, money)
               )}
             </Table.Td>
           ))}

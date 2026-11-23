@@ -1,6 +1,7 @@
 import { AppShell, Group, NavLink, Title } from "@mantine/core";
 import { Navigate, NavLink as RouterNavLink, Route, Routes } from "react-router";
 import { ApiStatus } from "./components/ApiStatus";
+import { CurrencySelect } from "./components/CurrencySelect";
 import { EmployeeDetailPage } from "./features/employee-detail/EmployeeDetailPage";
 import { EmployeesPage } from "./features/employees/EmployeesPage";
 import { Placeholder } from "./pages/Placeholder";
@@ -18,7 +19,10 @@ export function App() {
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
           <Title order={4}>Salary Management</Title>
-          <ApiStatus />
+          <Group gap="sm">
+            <CurrencySelect />
+            <ApiStatus />
+          </Group>
         </Group>
       </AppShell.Header>
 

@@ -22,7 +22,7 @@ import { CorrectEntryModal } from "../employee-actions/CorrectEntryModal";
 import { EditProfileModal } from "../employee-actions/EditProfileModal";
 import { RelocateModal } from "../employee-actions/RelocateModal";
 import { TerminateModal } from "../employee-actions/TerminateModal";
-import { formatMoney } from "../../lib/money";
+import { useMoney, type ShownMoney } from "../../components/display-currency-context";
 import { AuditHistory } from "./AuditHistory";
 import { PayTimeline } from "./PayTimeline";
 
@@ -33,15 +33,20 @@ function useBackToList(): string {
   return `/employees${from ?? ""}`;
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, shown }: { label: string; shown: ShownMoney }) {
   return (
     <Paper withBorder radius="md" p="md">
       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
         {label}
       </Text>
       <Text size="xl" fw={700} mt={4}>
-        {value}
+        {shown.text}
       </Text>
+      {shown.converted && (
+        <Text size="xs" c="dimmed">
+          {shown.original} local
+        </Text>
+      )}
     </Paper>
   );
 }
@@ -92,6 +97,7 @@ export function EmployeeDetailPage() {
   // Only ask for the history once the employee is known to exist.
   const audit = useEmployeeAudit(code, { enabled: employee.isSuccess });
   const meta = useMeta();
+  const money = useMoney();
   const [action, setAction] = useState<"edit" | "pay" | "relocate" | "terminate" | null>(null);
   const [correcting, setCorrecting] = useState<CompensationEntryView | null>(null);
   const closeAction = () => setAction(null);
@@ -181,9 +187,9 @@ export function EmployeeDetailPage() {
       </Text>
 
       <SimpleGrid cols={{ base: 1, sm: 3 }}>
-        <Stat label="Base salary" value={formatMoney(e.baseSalary, e.currency)} />
-        <Stat label="Target bonus" value={formatMoney(e.targetBonus, e.currency)} />
-        <Stat label="Total cash" value={formatMoney(e.totalCash, e.currency)} />
+        <Stat label="Base salary" shown={money(e.baseSalary, e.currency)} />
+        <Stat label="Target bonus" shown={money(e.targetBonus, e.currency)} />
+        <Stat label="Total cash" shown={money(e.totalCash, e.currency)} />
       </SimpleGrid>
 
       <Section title="Profile">

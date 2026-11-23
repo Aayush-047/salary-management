@@ -8,6 +8,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { App } from "./App";
+import { DisplayCurrencyProvider } from "./components/DisplayCurrencyProvider";
 
 const queryClient = new QueryClient();
 
@@ -20,9 +21,11 @@ createRoot(root).render(
       {/* Bottom-right: top-right would cover the page's action buttons for several seconds. */}
       <Notifications position="bottom-right" />
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <DisplayCurrencyProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </DisplayCurrencyProvider>
       </QueryClientProvider>
     </MantineProvider>
   </StrictMode>,
