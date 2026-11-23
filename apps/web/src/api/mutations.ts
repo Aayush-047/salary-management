@@ -3,12 +3,14 @@ import type {
   CorrectCompensationInput,
   CreateEmployeeInput,
   EmployeeDetail,
+  ImportCheckResponse,
+  ImportResponse,
   RelocateInput,
   TerminateInput,
   UpdateEmployeeInput,
 } from "@salary/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiSend } from "./client";
+import { apiSend, apiSendCsv } from "./client";
 
 /**
  * Every write returns the employee's fresh detail. Store it directly, and refresh what else may
@@ -59,3 +61,29 @@ export const useTerminate = (code: string) =>
   useEmployeeWrite((input: TerminateInput) =>
     apiSend<EmployeeDetail>("POST", path(code, "/terminate"), input),
   );
+
+type CsvUpload = { filename: string; text: string };
+const importPath = (suffix: string, filename: string) =>
+  `/imports/employees${suffix}?filename=${encodeURIComponent(filename)}`;
+
+/** Checks a file; saves nothing. */
+export const useCheckImport = () =>
+  useMutation({
+    mutationFn: ({ filename, text }: CsvUpload) =>
+      apiSendCsv<ImportCheckResponse>(importPath("/check", filename), text),
+  });
+
+/** Imports every row or none; refreshes anything that lists or summarises employees. */
+export function useImportEmployees() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ filename, text }: CsvUpload) =>
+      apiSendCsv<ImportResponse>(importPath("", filename), text),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["employees"] }),
+        queryClient.invalidateQueries({ queryKey: ["insights"] }),
+      ]);
+    },
+  });
+}

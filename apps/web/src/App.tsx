@@ -3,6 +3,7 @@ import { Navigate, NavLink as RouterNavLink, Route, Routes } from "react-router"
 import { ApiStatus } from "./components/ApiStatus";
 import { CurrencySelect } from "./components/CurrencySelect";
 import { EmployeeDetailPage } from "./features/employee-detail/EmployeeDetailPage";
+import { ImportPage } from "./features/import/ImportPage";
 import { EmployeesPage } from "./features/employees/EmployeesPage";
 import { InsightsPage } from "./features/insights/InsightsPage";
 import { Placeholder } from "./pages/Placeholder";
@@ -39,15 +40,12 @@ export function App() {
           <Route path="/employees" element={<EmployeesPage />} />
           <Route path="/employees/:code" element={<EmployeeDetailPage />} />
           <Route path="/insights" element={<InsightsPage />} />
-          {NAV_ITEMS.filter((item) => item.path !== "/employees" && item.path !== "/insights").map(
-            (item) => (
-              <Route
-                key={item.path}
-                path={item.path}
-                element={<Placeholder title={item.label} />}
-              />
-            ),
-          )}
+          <Route path="/import" element={<ImportPage />} />
+          {NAV_ITEMS.filter(
+            (item) => !["/employees", "/insights", "/import"].includes(item.path),
+          ).map((item) => (
+            <Route key={item.path} path={item.path} element={<Placeholder title={item.label} />} />
+          ))}
           <Route path="*" element={<Placeholder title="Page not found" />} />
         </Routes>
       </AppShell.Main>

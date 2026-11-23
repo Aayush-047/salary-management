@@ -44,3 +44,12 @@ export function apiSend<T>(method: "POST" | "PATCH", path: string, body: unknown
     body: JSON.stringify(body),
   });
 }
+
+/** Sends a CSV file's text as the request body (used by imports). */
+export function apiSendCsv<T>(path: string, csv: string): Promise<T> {
+  return request<T>(path, {
+    method: "POST",
+    headers: { "Content-Type": "text/csv" },
+    body: csv,
+  });
+}
