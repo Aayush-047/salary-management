@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: salary-api
+    runtime: node # Node version comes from .nvmrc
+    plan: free
+    buildCommand: npm ci && npm run build -w @salary/shared && npm run build -w @salary/api
+    # The free plan has no pre-deploy step, so migrations run at start (a no-op when up to date).
+    startCommand: npm run db:deploy -w @salary/api && npm run start -w @salary/api
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL # Neon connection string, entered in the Render dashboard
+        sync: false
+      - key: CORS_ORIGIN # the web app's Vercel URL, e.g. https://salary-management.vercel.app
+        sync: false
