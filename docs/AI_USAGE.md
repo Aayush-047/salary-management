@@ -277,3 +277,9 @@ The AI's own slips, caught and corrected:
 - An empty-upload test expected a 400, but the app's answer ("The file is empty", in the same
   report as any other problem) was better; the test was changed, not the app.
 - A file-picker locator that targeted Mantine's visible button instead of the hidden input.
+
+### Closing a gap before CI
+
+Before moving on, the AI checked the requirements against what was built and pointed out that the
+org-wide audit view promised in REQUIREMENTS.md still showed a "Coming soon" placeholder in the
+sidebar. I chose to build it rather than drop it from scope.

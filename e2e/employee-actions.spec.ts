@@ -115,3 +115,16 @@ test("records that the employee left and makes the profile read-only", async () 
   await page.goto(detailUrl);
   await expect(page.getByText("Left 2026-06-30")).toBeVisible();
 });
+
+test("the organisation-wide audit log shows the journey's changes and filters them", async () => {
+  await page.goto("/audit");
+  const lena = page.locator(".mantine-Paper-root", { hasText: "Lena Fischer" });
+  // Created, promoted, corrected and left: four changes for her.
+  await expect(lena).toHaveCount(4);
+
+  await page.locator("label", { hasText: /^Left$/ }).click();
+  await expect(page).toHaveURL(/action=TERMINATE/);
+  await expect(lena).toHaveCount(1);
+  await expect(lena).toContainText("Left the company");
+  await expect(lena).toContainText("Resigned");
+});

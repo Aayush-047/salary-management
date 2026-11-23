@@ -68,7 +68,7 @@ flowchart LR
 | `POST /employees/:code/relocate`     | New country and pay in its currency, as one event                                                                                                       |
 | `POST /employees/:code/terminate`    | Soft-terminate (end date + reason)                                                                                                                      |
 | `PATCH /compensation/:id`            | Correct a pay entry's amounts or date (reason required; allowed for leavers)                                                                            |
-| `GET /audit`                         | Org-wide audit _(planned)_                                                                                                                              |
+| `GET /audit`                         | Org-wide audit, newest first: `from`, `to` (whole UTC days), `action`, `search` (every word must match name, code or email), paging                     |
 | `POST /imports/employees/check`      | CSV as the request body (`?filename=`); every problem by row and column + per-country summary; saves nothing                                            |
 | `POST /imports/employees`            | Re-checks, then imports all rows or none: `201 {imported, firstCode, lastCode}` or `422 IMPORT_INVALID` with the report                                 |
 | `GET /insights/pay-stats`            | `groupBy` (country/department/jobTitle/level), `metric` (base/total), `currency` (LOCAL or a code), employee filters; per-group stats + a whole-org row |
@@ -195,13 +195,13 @@ For moving off spreadsheets: one row per **new** employee with their current pay
 
 React + Vite + Mantine, with TanStack Query for server state and React Router.
 
-| Page                | Contents                                                    |
-| ------------------- | ----------------------------------------------------------- |
-| **Employees**       | Server-paginated table with search and filters              |
-| **Employee detail** | Profile, pay timeline, audit history, edit / terminate      |
-| **Insights**        | Pay explorer, outliers (with band controls), recent changes |
-| **Import**          | CSV upload with a row-level error table                     |
-| **Audit log**       | Org-wide audit                                              |
+| Page                | Contents                                                                                           |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| **Employees**       | Server-paginated table with search and filters                                                     |
+| **Employee detail** | Profile, pay timeline, audit history, edit / terminate                                             |
+| **Insights**        | Pay explorer, outliers (with band controls), recent changes                                        |
+| **Import**          | CSV upload with a row-level error table                                                            |
+| **Audit log**       | Every change, newest first, headed by the employee (a link); filters for employee, type and period |
 
 A global **display-currency selector** in the header ("Local currency" or any currency in the FX
 table) controls conversion. It is **remembered in the browser** rather than carried in every URL
