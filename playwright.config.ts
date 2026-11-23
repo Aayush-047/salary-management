@@ -37,7 +37,7 @@ export default defineConfig({
     // replay steps against data the first attempt already changed.
     {
       name: "actions",
-      testMatch: /employee-actions\.spec\.ts/,
+      testMatch: /(employee-actions|import)\.spec\.ts/,
       dependencies: ["read-only"],
       retries: 0,
       use: { ...devices["Desktop Chrome"] },
