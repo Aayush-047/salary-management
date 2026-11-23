@@ -1,0 +1,11 @@
+# Web app on Netlify, built from the repo root so npm workspaces resolve.
+# Set VITE_API_URL (the Render API URL) in Netlify's environment variables.
+[build]
+  command = "npm run build -w @salary/shared && npm run build -w @salary/web"
+  publish = "apps/web/dist"
+
+# Single-page app: every path serves index.html, so deep links survive a refresh.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

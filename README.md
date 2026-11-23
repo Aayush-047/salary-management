@@ -45,14 +45,14 @@ Open http://localhost:5173.
 ## Deploy
 
 Three free-tier services, deployed separately: database on [Neon](https://neon.tech), API on
-[Render](https://render.com) (`render.yaml`), web on [Vercel](https://vercel.com)
-(`apps/web/vercel.json`).
+[Render](https://render.com) (`render.yaml`), web on [Netlify](https://www.netlify.com)
+(`netlify.toml`).
 
 1. **Neon:** create a Postgres project and copy its connection string.
 2. **Render:** New → Blueprint → this repository. Set `DATABASE_URL` to the Neon string and
    `CORS_ORIGIN` to the web app's URL (fill in after step 3). Migrations run on every start.
-3. **Vercel:** import the repository with **Root Directory** `apps/web` and the environment
-   variable `VITE_API_URL` set to the Render URL. Then put the Vercel URL into Render's
+3. **Netlify:** import the repository (settings come from `netlify.toml`) and set the environment
+   variable `VITE_API_URL` to the Render URL. Then put the Netlify URL into Render's
    `CORS_ORIGIN`.
 4. **Seed once**, from your own machine (the variable set on the command line wins over `.env`):
 

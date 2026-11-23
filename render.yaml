@@ -10,5 +10,5 @@ services:
     envVars:
       - key: DATABASE_URL # Neon connection string, entered in the Render dashboard
         sync: false
-      - key: CORS_ORIGIN # the web app's Vercel URL, e.g. https://salary-management.vercel.app
+      - key: CORS_ORIGIN # the web app's Netlify URL, e.g. https://salary-management.netlify.app
         sync: false

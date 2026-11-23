@@ -24,7 +24,7 @@ flowchart LR
   - **Services** hold business rules and wrap each change _and its audit record_ in one DB transaction.
   - **Repositories** are the only code that touches Prisma or SQL.
   - The **pure core** has no I/O and is unit-tested.
-- **Deployment:** frontend, API and database are deployed separately. Planned: web on Vercel, API on Render, Postgres on Neon (confirmed at the deploy step). The API allows the web origin via CORS, and the web app reads `VITE_API_URL`.
+- **Deployment:** frontend, API and database are deployed separately. Web on Netlify (`netlify.toml`), API on Render (`render.yaml`), Postgres on Neon, all on free tiers. Vercel was the first choice; sign-up trouble at deploy time made Netlify, an equivalent static host, the pick. The API allows the web origin via CORS, and the web app reads `VITE_API_URL`.
 
 ### Key trade-offs
 
