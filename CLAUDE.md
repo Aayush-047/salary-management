@@ -81,3 +81,7 @@ countries. Built step by step in pair-programming style with AI.
   (re-checked at import), amounts without dots, columns defined once in shared IMPORT_COLUMNS.
 - Uploaded or user-supplied text: parse into arrays and map only known names to keys; never
   build objects from untrusted keys. Check advisories against how this code uses a library.
+- Deploy: web on Netlify (`netlify.toml`), API on Render free (`render.yaml`, migrations at
+  start), Postgres on Neon; public repo, branch `main`. Secrets only in dashboards or a terminal
+  outside the AI session, never pasted into the conversation. Seed the hosted DB once, from a
+  developer machine.
