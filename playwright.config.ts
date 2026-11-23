@@ -30,7 +30,7 @@ export default defineConfig({
     // Read-only checks run first and assert exact numbers from the seed.
     {
       name: "read-only",
-      testMatch: /employees\.spec\.ts/,
+      testMatch: /(employees|insights)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     // The HR journey writes data, so it runs afterwards and is never retried: a retry would
