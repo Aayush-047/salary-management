@@ -37,7 +37,7 @@ export async function seedEmployees(
     return id;
   };
 
-  return prisma.$transaction(
+  const result = await prisma.$transaction(
     async (tx) => {
       for (const batch of chunks(employees, EMPLOYEE_BATCH_SIZE)) {
         await tx.employee.createMany({
@@ -74,4 +74,9 @@ export async function seedEmployees(
     },
     { timeout: TRANSACTION_TIMEOUT_MS },
   );
+
+  // Refresh planner statistics: right after a bulk load Postgres still thinks the tables are
+  // nearly empty and can pick very slow plans (the outlier query took 14 s instead of 40 ms).
+  await prisma.$executeRawUnsafe(`ANALYZE "Employee", "CompensationEntry"`);
+  return result;
 }

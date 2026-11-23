@@ -74,3 +74,18 @@ describe("seedEmployees", () => {
     expect(await testPrisma.compensationEntry.count()).toBe(0);
   });
 });
+
+describe("seedEmployees statistics", () => {
+  it("refreshes planner statistics so queries right after a bulk load are fast", async () => {
+    await seedEmployees(testPrisma, employees);
+
+    // ANALYZE sets pg_class.reltuples to the real row count (it is unknown after TRUNCATE).
+    const stats = await testPrisma.$queryRaw<{ relname: string; reltuples: number }[]>`
+      SELECT relname, reltuples::int AS reltuples FROM pg_class
+      WHERE relname IN ('Employee', 'CompensationEntry') ORDER BY relname`;
+    expect(stats).toEqual([
+      { relname: "CompensationEntry", reltuples: expectedEntries },
+      { relname: "Employee", reltuples: 200 },
+    ]);
+  });
+});
